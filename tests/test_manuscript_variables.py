@@ -36,8 +36,11 @@ def test_generate_variables_identity(tmp_path: Path) -> None:
     variables = mv.generate_variables()
     assert variables["MISSION_IDENTITY"] == "die_another_day"
     assert variables["MISSION_CODENAME"] == "ICARUS"
-    assert variables["NUM_CONCEPTS"] == "3"
+    assert variables["NUM_CONCEPTS"] == "6"
     assert variables["NUM_BIOMARKERS"] == "6"
+    assert variables["SEQ_GENOME_LENGTH"] == "1500"
+    assert variables["HYP_WATER_TEMP_C"] == "10"
+    assert variables["STRUCT_THICKNESS_CM"] == "30"
     assert variables["ICE_ENV_TEMP_C"] == "-34"
     assert variables["ORBIT_SMA_KM"] == "7200"
 

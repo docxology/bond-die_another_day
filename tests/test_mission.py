@@ -35,14 +35,22 @@ def test_brief(provider: MissionProvider) -> None:
 
 def test_recon(provider: MissionProvider) -> None:
     report = provider.recon(ReconRequest(goal="survey assets"))
-    assert len(report.findings) == 4
+    assert len(report.findings) == 6
     assert report.findings[0].label == "goal"
 
 
 def test_plan(provider: MissionProvider) -> None:
     plan = provider.plan(provider.brief())
-    assert len(plan.steps) == 4
-    assert [s.name for s in plan.steps] == ["identity", "ice_ops", "orbital", "verify"]
+    assert len(plan.steps) == 7
+    assert [s.name for s in plan.steps] == [
+        "identity",
+        "sequence",
+        "ice_ops",
+        "hypothermia",
+        "structure",
+        "orbital",
+        "verify",
+    ]
 
 
 def test_execute(provider: MissionProvider) -> None:
@@ -51,7 +59,10 @@ def test_execute(provider: MissionProvider) -> None:
     results = outcome.results
     assert results["identity"]["replacement_detected"] is True
     assert results["identity"]["genuine_cleared"] is True
+    assert results["sequence"]["replacement_suspected"] is True
+    assert results["sequence"]["genuine_matched"] is True
     assert results["ice_ops"]["rotation_feasible"] is True
+    assert results["hypothermia"]["feasible"] is True
     assert results["orbital_mirror"]["feasible_seconds"] > 0.0
     assert outcome.provenance.seed == 7
     assert outcome.provenance.wall_time_s == 0.0
@@ -60,7 +71,7 @@ def test_execute(provider: MissionProvider) -> None:
 def test_debrief(provider: MissionProvider) -> None:
     outcome = provider.execute(provider.plan(provider.brief()))
     debrief = provider.debrief(outcome)
-    assert len(debrief.lessons) == 3
+    assert len(debrief.lessons) == 6
     assert all(isinstance(lesson, str) and lesson for lesson in debrief.lessons)
 
 
@@ -75,10 +86,14 @@ def test_gadgets_registered() -> None:
     assert "die_another_day" in ICARUS_GADGETS
     assert ICARUS_GADGETS.gadgets_for("die_another_day") == (
         "identity_detection",
+        "sequence_identity",
         "ice_ops",
+        "hypothermia",
+        "ice_structure",
         "orbital_mirror",
     )
     assert callable(ICARUS_GADGETS.lookup("die_another_day", "ice_ops"))
+    assert callable(ICARUS_GADGETS.lookup("die_another_day", "hypothermia"))
 
 
 def test_discovery_by_slug() -> None:

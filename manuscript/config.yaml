@@ -58,6 +58,13 @@ concepts:
     std_threshold: 3.0
     min_markers: 2
     seed: 7
+  sequence_identity:
+    genome_length: 1500
+    kmer_k: 9
+    match_jaccard: 0.90
+    cluster_min: 12
+    scattered_errors: 5
+    seed: 7
   ice_ops:
     env_temp_c: -34.0
     critical_temp_c: 30.0
@@ -66,6 +73,19 @@ concepts:
     num_operatives: 4
     op_duration_s: 1800
     thermal_conductance: 1500.0
+  hypothermia:
+    water_temp_c: 10.0
+    body_mass_kg: 75.0
+    insulation_factor: 0.9
+    distance_m: 400.0
+    sweep_speed_m_s: 2.0
+    seed: 7
+  ice_structure:
+    thickness_cm: 30.0
+    load_tons: 3.0
+    delta_t_c: 15.0
+    ice_strength_mpa: 1.5
+    seed: 7
   orbital_mirror:
     # A circular LEO orbit inclined 65 deg so it reaches the 60N target.
     semi_major_axis_km: 7200.0

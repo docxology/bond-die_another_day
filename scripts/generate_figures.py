@@ -4,8 +4,9 @@
 Usage:
     uv run python scripts/generate_figures.py
 
-Runs the deterministic mission once, then writes both concept figures
-(elevation pass profile and identity trait-drift) into ``output/figures/``.
+Runs the mission's deterministic models once, then writes the concept figures
+(elevation pass, identity drift, hypothermia curve, sequence mismatch map) into
+``output/figures/``.
 """
 
 from __future__ import annotations
@@ -20,7 +21,13 @@ if str(SRC) not in sys.path:
 
 from die_another_day import identity_detection as idmod  # noqa: E402
 from die_another_day import orbital_mirror as om  # noqa: E402
-from die_another_day.figures import render_identity_drift, render_pass_profile  # noqa: E402
+from die_another_day import sequence_identity as si  # noqa: E402
+from die_another_day.figures import (  # noqa: E402
+    render_hypothermia_curve,
+    render_identity_drift,
+    render_pass_profile,
+    render_sequence_mismatches,
+)
 from die_another_day.manuscript_variables import load_manuscript_config  # noqa: E402
 
 
@@ -52,11 +59,7 @@ def main() -> int:
     # Identity trait drift
     idc = concepts["identity"]
     marker_count = int(idc["num_biomarkers"])
-    baseline = idmod.generate_identity_samples(
-        rng_seed=int(idc["seed"]),
-        n_samples=200,
-        marker_count=marker_count,
-    )
+    baseline = idmod.generate_identity_samples(rng_seed=int(idc["seed"]), n_samples=200, marker_count=marker_count)
     profile = idmod.estimate_profile(baseline)
     replaced_z = idmod.per_marker_z_scores(
         profile, profile.mean + 1.5 * float(idc["std_threshold"]) * profile.per_marker_std
@@ -77,8 +80,31 @@ def main() -> int:
         std_threshold=float(idc["std_threshold"]),
     )
 
+    # Cold-water hypothermia curve
+    hypc = concepts["hypothermia"]
+    hyp_path = render_hypothermia_curve(
+        float(hypc["water_temp_c"]),
+        float(hypc["body_mass_kg"]),
+        float(hypc["insulation_factor"]),
+        1800.0,
+        out_dir / "icarus_hypothermia_curve.png",
+    )
+
+    # DNA sequence mismatch map (replaced probe)
+    seq = concepts["sequence_identity"]
+    reference = si.generate_genome(int(seq["genome_length"]), seed=int(seq["seed"]))
+    replaced_seq = si.mutate_genome(
+        reference,
+        seed=int(seq["seed"]),
+        n_substitutions=int(seq["scattered_errors"]),
+        cluster_length=int(seq["cluster_min"]),
+    )
+    seq_path = render_sequence_mismatches(reference, replaced_seq, out_dir / "icarus_sequence_mismatch.png")
+
     print(f"Wrote {pass_path}")
     print(f"Wrote {drift_path}")
+    print(f"Wrote {hyp_path}")
+    print(f"Wrote {seq_path}")
     return 0
 
 

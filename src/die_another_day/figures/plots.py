@@ -11,10 +11,12 @@ matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from die_another_day import hypothermia as hyp  # noqa: E402
+from die_another_day import sequence_identity as si  # noqa: E402
 from die_another_day.identity_detection import DriftVerdict  # noqa: E402
 from die_another_day.orbital_mirror import PassPlan  # noqa: E402
 
-__all__ = ["render_pass_profile", "render_identity_drift"]
+__all__ = ["render_hypothermia_curve", "render_identity_drift", "render_pass_profile", "render_sequence_mismatches"]
 
 
 def _save(fig: plt.Figure, out_path: Path) -> Path:
@@ -78,5 +80,60 @@ def render_identity_drift(
     ax.set_title(f"identity trait drift — replaced={verdict.replaced}")
     ax.legend(loc="best")
     ax.grid(alpha=0.3, axis="y")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def render_hypothermia_curve(
+    water_c: float,
+    mass_kg: float,
+    insulation_factor: float,
+    duration_s: float,
+    out_path: Path,
+) -> Path:
+    """Render the cold-water immersion core-temperature decay with stage bands."""
+    times = np.linspace(0.0, duration_s, 512)
+    k = hyp.cooling_rate_water(mass_kg, insulation_factor)
+    temps = np.array([hyp.immersion_core_temp(37.0, water_c, k, float(t)) for t in times])
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(times, temps, color="#1f4e79", label="core temperature")
+    for threshold, label, color in [
+        (35.0, "mild (35C)", "#7d7d7d"),
+        (32.0, "moderate (32C)", "#7d7d7d"),
+        (28.0, "severe (28C)", "#7d7d7d"),
+    ]:
+        ax.axhline(threshold, color=color, linestyle="--", linewidth=0.9)
+        ax.text(times[-1] * 0.02, threshold + 0.3, label, fontsize=8, color=color)
+    ax.set_xlabel("immersion time (s)")
+    ax.set_ylabel("core temperature (C)")
+    ax.set_title(f"cold-water immersion ({water_c:g} C, {mass_kg:g} kg)")
+    ax.legend(loc="best")
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def render_sequence_mismatches(reference: str, probe: str, out_path: Path) -> Path:
+    """Render DNA mismatch positions, shading the contiguous edit clusters."""
+    mismatch = np.array([int(a != b) for a, b in zip(reference, probe, strict=True)])
+    positions = np.arange(len(reference))
+    clusters = si.mismatch_clusters(reference, probe, min_run=1)
+
+    fig, ax = plt.subplots(figsize=(10, 3.5))
+    ax.fill_between(positions, mismatch, step="mid", color="#c0392b", alpha=0.6, label="mismatch")
+    for start, end in clusters:
+        ax.axvspan(
+            start - 0.5,
+            end - 0.5,
+            color="#c9a227",
+            alpha=0.3,
+            label="contiguous edit" if start == clusters[0][0] else None,
+        )
+    ax.set_xlabel("genome position")
+    ax.set_ylabel("mismatch (0/1)")
+    ax.set_ylim(-0.05, 1.05)
+    ax.set_title("DNA sequence identity verification — mismatch map")
+    ax.legend(loc="upper right")
     fig.tight_layout()
     return _save(fig, out_path)

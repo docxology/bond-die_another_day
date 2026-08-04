@@ -6,7 +6,13 @@ from pathlib import Path
 
 from die_another_day import identity_detection as idmod
 from die_another_day import orbital_mirror as om
-from die_another_day.figures import render_identity_drift, render_pass_profile
+from die_another_day import sequence_identity as si
+from die_another_day.figures import (
+    render_hypothermia_curve,
+    render_identity_drift,
+    render_pass_profile,
+    render_sequence_mismatches,
+)
 
 SMA = 7200e3
 MA = 320.0
@@ -39,5 +45,19 @@ def test_render_identity_drift(tmp_path: Path) -> None:
     replaced_z = idmod.per_marker_z_scores(profile, replaced)
     verdict = idmod.detect_drift(profile, replaced)
     out = render_identity_drift(genuine_z, replaced_z, verdict, tmp_path / "drift.png", std_threshold=3.0)
+    assert out.is_file()
+    assert out.stat().st_size > 0
+
+
+def test_render_hypothermia_curve(tmp_path: Path) -> None:
+    out = render_hypothermia_curve(10.0, 75.0, 0.9, 1800.0, tmp_path / "hyp.png")
+    assert out.is_file()
+    assert out.stat().st_size > 0
+
+
+def test_render_sequence_mismatches(tmp_path: Path) -> None:
+    reference = si.generate_genome(1500, seed=7)
+    probe = si.mutate_genome(reference, seed=7, n_substitutions=5)
+    out = render_sequence_mismatches(reference, probe, tmp_path / "seq.png")
     assert out.is_file()
     assert out.stat().st_size > 0

@@ -14,10 +14,10 @@
 
 | Surface | Rule |
 | --- | --- |
-| `src/die_another_day/identity_detection.py`, `ice_ops.py`, `orbital_mirror.py` | Pure domain core. stdlib + numpy + scipy only. **No** `infrastructure.*`, **no** `bond_api` imports — importable standalone. |
-| `src/die_another_day/mission.py` | Thin adapter. The **only** module importing `bond_api`; implements the protocol and registers gadgets. |
+| `src/die_another_day/identity_detection.py`, `sequence_identity.py`, `ice_ops.py`, `hypothermia.py`, `ice_structure.py`, `orbital_mirror.py` | Pure domain core. stdlib + numpy + scipy only. **No** `infrastructure.*`, **no** `bond_api` imports — importable standalone. |
+| `src/die_another_day/mission.py` | Thin adapter. The **only** module importing `bond_api`; implements the protocol and registers the six concept gadgets. |
 | `src/die_another_day/manuscript_variables.py` | Reads `manuscript/config.yaml` → emits `{{TOKEN}}` map (yaml only). |
-| `src/die_another_day/figures/` | Deterministic matplotlib figure generators. |
+| `src/die_another_day/figures/` | Deterministic matplotlib figure generators (4 concept figures). |
 | `scripts/` | Thin orchestrators: sys.path bootstrap + one call into `src/`, no business logic. |
 | `tests/` | Zero mocks; real data + computation only. |
 

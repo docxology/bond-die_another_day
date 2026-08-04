@@ -32,7 +32,10 @@ _TOKEN_RE = re.compile(r"\{\{[A-Z0-9_]+\}\}")
 
 CONCEPT_NAMES = (
     "Biometric Identity-Replacement Detection",
+    "DNA Sequence Identity Verification",
     "Ice-Palace Thermal Operations",
+    "Cold-Water Hypothermia Risk",
+    "Ice-Structure Integrity",
     "Orbital Mirror Targeting",
 )
 
@@ -75,7 +78,10 @@ def generate_variables(
     if require_outputs and not concepts:
         raise ValueError("manuscript config 'concepts' section is empty — nothing to report")
     identity = concepts.get("identity", {})
+    sequence = concepts.get("sequence_identity", {})
     ice = concepts.get("ice_ops", {})
+    hyp = concepts.get("hypothermia", {})
+    structure = concepts.get("ice_structure", {})
     mirror = concepts.get("orbital_mirror", {})
 
     return {
@@ -91,12 +97,25 @@ def generate_variables(
         "IDENTITY_ALPHA": _num(identity.get("alpha", 0.001)),
         "IDENTITY_STD_THRESHOLD": _num(identity.get("std_threshold", 3.0)),
         "IDENTITY_MIN_MARKERS": _num(identity.get("min_markers", 2)),
+        "SEQ_GENOME_LENGTH": _num(sequence.get("genome_length", 1500)),
+        "SEQ_KMER_K": _num(sequence.get("kmer_k", 9)),
+        "SEQ_MATCH_JACCARD": _num(sequence.get("match_jaccard", 0.90)),
+        "SEQ_CLUSTER_MIN": _num(sequence.get("cluster_min", 12)),
         "ICE_ENV_TEMP_C": _num(ice.get("env_temp_c", -34.0)),
         "ICE_CRITICAL_TEMP_C": _num(ice.get("critical_temp_c", 30.0)),
         "ICE_BODY_TEMP_C": _num(ice.get("body_temp_c", 37.0)),
         "ICE_DECAY_RATE_H": _num(ice.get("decay_rate_h", 0.8)),
         "ICE_NUM_OPERATIVES": _num(ice.get("num_operatives", 4)),
-        "ICE_OP_DURATION_S": _num(ice.get("op_duration_s", 5400)),
+        "ICE_OP_DURATION_S": _num(ice.get("op_duration_s", 1800)),
+        "HYP_WATER_TEMP_C": _num(hyp.get("water_temp_c", 10.0)),
+        "HYP_MASS_KG": _num(hyp.get("body_mass_kg", 75.0)),
+        "HYP_INSULATION": _num(hyp.get("insulation_factor", 0.9)),
+        "HYP_DISTANCE_M": _num(hyp.get("distance_m", 400.0)),
+        "HYP_SWEEP_SPEED_M_S": _num(hyp.get("sweep_speed_m_s", 2.0)),
+        "STRUCT_THICKNESS_CM": _num(structure.get("thickness_cm", 30.0)),
+        "STRUCT_LOAD_TONS": _num(structure.get("load_tons", 3.0)),
+        "STRUCT_DELTA_T_C": _num(structure.get("delta_t_c", 15.0)),
+        "STRUCT_ICE_STRENGTH_MPA": _num(structure.get("ice_strength_mpa", 1.5)),
         "ORBIT_SMA_KM": _num(mirror.get("semi_major_axis_km", 6878.0)),
         "ORBIT_INCLINATION_DEG": _num(mirror.get("inclination_deg", 45.0)),
         "MIRROR_AREA_M2": _num(mirror.get("mirror_area_m2", 1e4)),
