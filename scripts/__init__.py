@@ -1,1 +1,1 @@
-"""Thin orchestrator scripts for die_another_day."""
+"""ICARUS — mission-phase CLI package."""

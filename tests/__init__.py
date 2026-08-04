@@ -1,1 +1,1 @@
-"""Tests for small code project."""
+"""Tests package for die_another_day (ICARUS)."""

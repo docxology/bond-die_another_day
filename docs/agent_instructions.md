@@ -1,160 +1,44 @@
-# AI Agent Instructions — die_another_day Exemplar
+# Agent Instructions — ICARUS (die_another_day)
 
-## Why This File Exists
+Read-first operational rules for AI agents working inside this package.
 
-`die_another_day` is the **control positive** for the template repository: the canonical example proving that the computational-research path works correctly. Deviating from the rules below — introducing a mock, moving math to scripts/, breaking the src/infrastructure boundary — breaks the exemplar purpose and misleads future users who study this project to understand how the template works.
+## The seven rules
 
-Read this file before touching any other file in this project.
+1. **Zero mocks.** No `unittest.mock`, `MagicMock`, `@patch`, or
+   `create_autospec` anywhere in `tests/`. Tests use real computation and real
+   data. A mock-based test can pass while the science is wrong — that defeats
+   the point of a mission-software package.
+2. **Infrastructure-free domain core.** `identity_detection.py`, `ice_ops.py`,
+   and `orbital_mirror.py` must not import `infrastructure.*` or `bond_api`.
+   They are the importable-standalone mathematical core.
+3. **Thin orchestrators.** `scripts/` does argv + sys.path bootstrap + a single
+   call into `src/`. No business logic or math in scripts.
+4. **Deterministic.** Fixed seed (`7`). No unseeded random draws, no wall-clock
+   in persisted artifacts. Provenance `wall_time_s` is `0.0`.
+5. **Tokens from code.** Manuscript numeric facts use `{{TOKEN}}`s hydrated by
+   `scripts/z_generate_manuscript_variables.py` from
+   `manuscript/config.yaml` — never hand-author metrics in prose.
+6. **Type hints + docstrings.** Every public function is annotated and
+   documented.
+7. **Real protocol.** `mission.py` is the only module that imports `bond_api`;
+   it implements the frozen `MissionProvider` exactly and registers its gadgets.
 
----
+## Contribution / editing workflow
 
-## Rule 1: Read the Hub First
+1. Read `docs/architecture.md` before touching module boundaries.
+2. Read `docs/testing_philosophy.md` before writing or editing tests.
+3. After editing Python: `uv run ruff check`, `uv run ruff format`,
+   `uv run mypy`, then `uv run pytest tests/ --cov=src --cov-fail-under=90`.
+4. If you changed a public surface or a config parameter, update the relevant
+   manuscript section and re-run the variable hydration + cross-reference test.
 
-Reading order is mandatory, not advisory. Each document gates a category of action:
-
-| Document | Governs | Skip consequence |
-|---|---|---|
-| **This file** | All modifications | Risk all violations below |
-| [`architecture.md`](architecture.md) | Any file-boundary change | Risk violating src/scripts boundary |
-| [`testing_philosophy.md`](testing_philosophy.md) | Any test modification | Risk introducing mocks or reducing coverage |
-| [`rendering_pipeline.md`](rendering_pipeline.md) | Any manuscript or output change | Risk unresolved `{{VARIABLE}}` tokens in PDF |
-| [`style_guide.md`](style_guide.md) | Any source code modification | Risk mock usage, wrong import layer, bad error messages |
-| [`syntax_guide.md`](syntax_guide.md) | Any manuscript `.md` modification | Risk hardcoded numbers, broken figure references |
-
----
-
-## Rule 2: Coverage Gate — ≥90% on `src/`
-
-The test suite spans `test_optimizer.py` (pure math), `test_analysis_integration.py` (orchestration), `test_analysis_coverage.py` (orchestration branches and error paths), `test_experiment_config.py`, `test_figures_orchestration.py`, `test_dashboard_config.py`, `test_invariants.py`, `test_invariants_and_dashboard.py`, `test_manuscript_variables.py`, `test_documentation.py` (API doc helpers), and `test_scripts_smoke.py` (auxiliary script smoke). Both the project `pyproject.toml` and the root pipeline gate coverage at **90%**. Live test count + current coverage percentage live in [`docs/_generated/COUNTS.md`](../../../../docs/_generated/COUNTS.md) — do not hardcode either number in prose, because both drift faster than the docs touching them.
-
-Before modifying `src/optimizer.py`, count the existing tests for the function you are changing. After modifying, run:
-
-```bash
-uv run pytest projects/working/bond/die_another_day/tests/ \
-    --cov=projects/working/bond/die_another_day/src \
-    --cov-fail-under=90 \
-    --cov-report=term-missing \
-    -v
-```
-
-If coverage drops, do not delete tests to make the number work — fix the gap.
-
----
-
-## Rule 3: The Thin Orchestrator Boundary — `scripts/` vs `src/`
-
-**`src/optimizer.py`** contains pure mathematical functions: no file I/O, no infrastructure imports, no side-effects, stdlib `logging` only.
-
-**`scripts/*.py`** contains experiment coordination: loops over step sizes, calls to `src/` functions, delegation to `infrastructure.*`, writing CSVs and PNGs.
-
-**The boundary test**: If a line of code in `scripts/` contains a mathematical expression that determines the algorithm's output (a gradient, an update step, a convergence check), it violates the boundary. Move that expression to `src/` and write a test for it.
-
-**Forbidden**:
-```python
-# In scripts/optimization_analysis.py — BAD
-x = x - alpha * (x - 1.0)   # Gradient update rule belongs in src/
-```
-
-**Correct**:
-```python
-# In scripts/optimization_analysis.py — GOOD
-result = gradient_descent(x0, obj_func, grad_func, step_size=alpha)
-```
-
----
-
-## Rule 4: "Show, Not Tell" Documentation
-
-When updating `manuscript/` files, use explicit, verifiable references instead of vague descriptions.
-
-**BAD** (vague, unverifiable):
-```markdown
-Our testing framework validates numerical accuracy using standard approaches.
-```
-
-**GOOD** (concrete, linkable):
-```markdown
-`projects/working/bond/die_another_day/tests/test_optimizer.py::TestComputeGradient` validates gradient
-accuracy against analytical solutions without mocks, using `numpy` arrays with known values.
-```
-
-**BAD** (vague):
-```markdown
-The infrastructure renders the manuscript to PDF automatically.
-```
-
-**GOOD** (concrete):
-```markdown
-`infrastructure/rendering/pdf_renderer.py` orchestrates Pandoc → XeLaTeX to produce
-`output/templates/die_another_day/pdf/template_code_project_combined.pdf` from substituted markdown in `projects/working/bond/die_another_day/output/manuscript/`.
-```
-
----
-
-## Rule 5: Determinism Policy
-
-Prefer fixed inputs in `src/` and tests. When a test uses random draws (e.g., timing on large random arrays), two requirements apply:
-
-1. Assertions must use **bounds** (`assert elapsed < 5.0`), not exact values (`assert elapsed == 0.003`).
-2. The test docstring must explain why timing is the relevant property to check.
-
-Fixed seeds are acceptable for `numpy.random` in timing tests:
-```python
-rng = np.random.default_rng(42)
-large_A = rng.standard_normal((50, 50))
-```
-
-Prefer analytical inputs over random inputs whenever a mathematical property can be directly verified.
-
----
-
-## Rule 6: Style and Syntax Guides Govern Their Domains
-
-- **[`style_guide.md`](style_guide.md)** governs: `src/optimizer.py`, `tests/test_optimizer.py`, `scripts/*.py` — mock prohibition, infrastructure delegation, thin orchestrator, error message format, type hints.
-- **[`syntax_guide.md`](syntax_guide.md)** governs: `manuscript/*.md` — `{{VARIABLE}}` injection, `[@label]` Pandoc-crossref cross-references, figure labels, table captions.
-
-Do not apply code-style rules to manuscript prose, and do not apply manuscript syntax rules to Python source.
-
----
-
-## Rule 7: `output/` Is Disposable — Never Edit Generated Files
-
-The entire `projects/working/bond/die_another_day/output/` tree is written by the pipeline and overwritten on every run. Editing a file in `output/` has zero lasting effect and will confuse future agents.
-
-If you need to change what a generated file contains, change the **generator**:
-- To change `output/data/optimization_results.csv` → modify `src/analysis/` (re-run via `scripts/optimization_analysis.py`)
-- To change `output/manuscript/03_results.md` → modify `manuscript/03_results.md` (the template) and/or `scripts/z_generate_manuscript_variables.py` (the variable definitions)
-- To change `output/pdf/template_code_project_combined.pdf` → modify the manuscript source files, then re-render
-
-See [`output_conventions.md`](output_conventions.md) for the complete regeneration sequence.
-
----
-
-## Verification Checklist
-
-Run all three commands before submitting any change to this project:
+## Verification checklist (before done)
 
 ```bash
-# 1. Tests pass and coverage gate is met
-uv run pytest projects/working/bond/die_another_day/tests/ \
-    --cov=projects/working/bond/die_another_day/src \
-    --cov-fail-under=90 -q
-
-# 2. No mocks exist anywhere in tests/
-grep -r "unittest.mock\|MagicMock\|@patch\|create_autospec" \
-    projects/working/bond/die_another_day/tests/ || echo "Clean — no mocks found"
-
-# 3. The mathematical primitives (optimizer.py, invariants.py) have no infrastructure imports.
-#    These two files MUST remain infrastructure-free so they are copy-pasteable into any
-#    Python environment without the pipeline installed. Other `src/` modules (`analysis/`,
-#    `dashboard.py`, `manuscript_variables.py`) are orchestration layers and may import
-#    `infrastructure.*` behind try/except fallbacks; that is intentional and documented in
-#    `src/AGENTS.md` and `architecture.md`.
-grep -nE "^(from|import) infrastructure" \
-    projects/working/bond/die_another_day/src/optimizer.py \
-    projects/working/bond/die_another_day/src/invariants.py \
-    && echo "VIOLATION — math primitive imports infrastructure" \
-    || echo "Clean — math primitives are infrastructure-free"
+uv run pytest tests/ --cov=src --cov-fail-under=90
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
+uv run mypy src/ scripts/
+rg -n "template[_]code_project" . || echo Clean
+grep -r "unittest.mock\|MagicMock\|@patch\|create_autospec" tests/ || echo Clean
+git status --short   # clean after the path-scoped commit
 ```
-
-All three must produce zero violations (or the "Clean" message for checks 2 and 3).

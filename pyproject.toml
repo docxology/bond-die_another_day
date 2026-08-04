@@ -1,4 +1,4 @@
-# Code Project Configuration
+# die_another_day — ICARUS (Die Another Day, 2002) · PROJECT BOND film package
 # Inherits workspace settings from root pyproject.toml
 
 [build-system]
@@ -7,24 +7,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "die_another_day"
-version = "2.5.2"
+version = "0.1.0"
 license = {text = "MIT"}
-description = "Fully-tested codebase with numerical optimization and analysis"
+description = "ICARUS — special-agent mission software: biometric identity-replacement detection, ice-palace thermal operations, and orbital-mirror targeting."
 authors = [
     {name = "Daniel Ari Friedman", email = "daniel@activeinference.institute"}
 ]
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.24.0",
+    "scipy>=1.10.0",
     "matplotlib>=3.7.0",
     "pyyaml>=6.0",
-    "defusedxml>=0.7.1",
+    "bond-api",
 ]
+
+[tool.uv.sources]
+bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "types-PyYAML>=6.0",
 ]
 
 [tool.pytest.ini_options]
@@ -37,8 +44,8 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short --strict-markers"
 
 [tool.coverage.run]
-# Core Template Rule: We only calculate coverage for primary source code (`src/`),
-# ensuring test code itself does not artificially inflate metric scores.
+# Core Template Rule: coverage is calculated only for primary source (`src/`),
+# so test code does not inflate the metric.
 source = ["src"]
 branch = true
 omit = [
@@ -48,8 +55,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-# ≥90% on src/ is the enforced gate; live coverage % is tracked in
-# docs/_generated/COUNTS.md (do not hardcode it here — it drifts).
+# >=90% on src/ is the enforced gate.
 fail_under = 90
 show_missing = true
 precision = 2
@@ -58,6 +64,21 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
 ]
+
+[tool.mypy]
+# Project-local mypy settings (the monorepo root config has no mypy_path for
+# this package's src/ layout).
+python_version = "3.12"
+mypy_path = ["src"]
+explicit_package_bases = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true
 
 [tool.uv]
 # Inherits workspace settings from root pyproject.toml

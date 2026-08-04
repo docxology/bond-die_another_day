@@ -1,10 +1,10 @@
-# References {#sec:references}
+# References
 
-Bibliography lives in [`manuscript/references.bib`](references.bib) and is read by Pandoc during PDF render. The build pipeline invokes Pandoc with `--natbib`, so every `[@key]` citation in the manuscript is rewritten to the appropriate `\cite{}`/`\citep{}`/`\citet{}` LaTeX command and resolved against the bib file.
-
-To validate that `references.bib` is syntactically clean and contains the required fields per entry type:
-
-```bash
-uv run python -m infrastructure.reference.citation.cli validate \
-    projects/working/bond/die_another_day/manuscript/references.bib --strict
-```
+1. P. C. Mahalanobis, "On the generalized distance in statistics,"
+   *Proceedings of the National Institute of Sciences of India*, 1936.
+2. I. Newton, *Philosophiæ Naturalis Principia Mathematica*, 1687 (cooling law
+   as applied to thermal-exposure modelling).
+3. R. H. Battin, *An Introduction to the Mathematics and Methods of
+   Astrodynamics*, AIAA Education Series, 1999.
+4. P. E. Glaser, "Power from the sun: its future," *Science*, vol. 162, 1968
+   (space-based solar power / orbital reflector concept).

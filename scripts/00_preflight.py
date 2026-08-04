@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
-"""Pre-flight check for manuscript rendering prerequisites."""
+"""Thin orchestrator: ICARUS mission preflight and identity report.
+
+Usage:
+    uv run python scripts/00_preflight.py
+"""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO_ROOT))
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-from infrastructure.rendering.preflight import run_manuscript_preflight  # noqa: E402
+from bond_api.protocol import protocol_surface  # noqa: E402
+from die_another_day import CODENAME, CONCEPT_MODULES, IDENTITY, __version__  # noqa: E402
 
 
 def main() -> int:
-    """CLI entry point."""
-    manuscript_dir = Path(__file__).resolve().parent.parent / "manuscript"
-    ok, message = run_manuscript_preflight(manuscript_dir)
-    if ok:
-        return 0
-    sys.stderr.write(message)
-    return 1
+    surface = protocol_surface()
+    print(f"Mission identity: {IDENTITY}")
+    print(f"Mission codename: {CODENAME}")
+    print(f"Package version: {__version__}")
+    print(f"Concept modules ({len(CONCEPT_MODULES)}): {', '.join(CONCEPT_MODULES)}")
+    print(f"Protocol dataclasses ({len(surface['dataclasses'])}): {', '.join(surface['dataclasses'])}")
+    print(f"Provider methods: {', '.join(surface['provider_methods'])}")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -1,31 +1,26 @@
 {
   "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
   "@type": "SoftwareSourceCode",
+  "identifier": "die_another_day",
+  "name": "die_another_day: ICARUS — Special-Agent Mission Software",
+  "description": "PROJECT BOND film package for Die Another Day (2002), mission codename ICARUS. Pure deterministic mission software: biometric identity-replacement detection, ice-palace cold-environment operations planning, and orbital-mirror targeting, exposed through a frozen BOND-API MissionProvider.",
+  "version": "0.1.0",
+  "license": "https://spdx.org/licenses/MIT",
   "author": [
     {
-      "@id": "https://orcid.org/0000-0001-6232-9096",
       "@type": "Person",
-      "affiliation": {
-        "@type": "Organization",
-        "name": "Active Inference Institute"
-      },
+      "givenName": "Daniel Ari",
       "familyName": "Friedman",
-      "givenName": "Daniel Ari"
+      "@id": "https://orcid.org/0000-0001-6232-9096",
+      "affiliation": "Active Inference Institute"
     }
   ],
-  "codeRepository": "https://github.com/docxology/die_another_day",
-  "dateModified": "2026-07-10",
-  "identifier": "10.5281/zenodo.20417136",
   "keywords": [
-    "optimization algorithms",
-    "gradient descent",
-    "convergence analysis",
-    "numerical methods",
-    "mathematical programming",
-    "reproducible research",
-    "infrastructure automation"
+    "identity-replacement detection",
+    "thermal operations planning",
+    "orbital mirror targeting",
+    "mission software"
   ],
-  "license": "https://spdx.org/licenses/MIT",
-  "name": "Convergence Analysis of Gradient Descent Optimization",
-  "version": "2.5.2"
+  "programmingLanguage": "Python",
+  "codeRepository": "https://github.com/docxology/die_another_day"
 }

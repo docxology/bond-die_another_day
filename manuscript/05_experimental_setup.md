@@ -1,60 +1,36 @@
-# Experimental Setup {#sec:experimental_setup}
+# Experimental Setup
 
-This section details the complete experimental configuration used to generate the results in this study. Every parameter value below is injected programmatically from `config.yaml` and the analysis pipeline — no value is hardcoded in the manuscript source.
+All mission parameters are declared once in `manuscript/config.yaml` under the
+`concepts:` block and consumed by the code via
+`src/die_another_day/manuscript_variables.py`. They are reproduced here as
+mission tokens so the manuscript cannot drift from the configuration.
 
-## Problem Definition
+## Identity detection
 
-The optimization target is the quadratic objective function defined in [@eq:quadratic_objective]:
+- Biomarker markers: {{NUM_BIOMARKERS}}
+- Test size $\alpha$: {{IDENTITY_ALPHA}}
+- Per-marker $z$ threshold: {{IDENTITY_STD_THRESHOLD}}
+- Minimum flagged markers: {{IDENTITY_MIN_MARKERS}}
 
-\begin{equation}
-\label{eq:quadratic_objective}
-f(x) = \frac{1}{2} x^T A x - b^T x
-\end{equation}
+## Ice-palace operations
 
-with $A = {{CONFIG_QUADRATIC_A}}$ and $b = {{CONFIG_QUADRATIC_B}}$, yielding the analytical optimum at $x^* = {{RESULT_OPTIMUM_X}}$ with $f(x^*) = {{RESULT_OPTIMUM_F}}$.
+- Ambient temperature: {{ICE_ENV_TEMP_C}} C
+- Body/core temperature: {{ICE_BODY_TEMP_C}} C
+- Critical (minimum safe) core temperature: {{ICE_CRITICAL_TEMP_C}} C
+- Cooling decay rate: {{ICE_DECAY_RATE_H}} /hour
+- Operatives available: {{ICE_NUM_OPERATIVES}}
+- Operation duration: {{ICE_OP_DURATION_S}} s
 
-## Parameter Space
+## Orbital-mirror targeting
 
-The experiment systematically varies the gradient descent step size across {{CONFIG_NUM_STEP_SIZES}} values:
+- Orbit semi-major axis: {{ORBIT_SMA_KM}} km
+- Orbit inclination: {{ORBIT_INCLINATION_DEG}} deg
+- Mirror area: {{MIRROR_AREA_M2}} m^2
+- Mirror reflectivity: {{MIRROR_REFLECTIVITY}}
+- Beam half-angle: {{MIRROR_BEAM_HALF_ANGLE_DEG}} deg
+- Minimum targeting elevation: {{MIRROR_MIN_ELEVATION_DEG}} deg
 
-{{CONFIG_STEP_SIZES_BULLETS}}
+## Software environment
 
-All runs start from the initial point $x_0 = {{CONFIG_INITIAL_POINT}}$ and use a convergence tolerance of $\|{\nabla f}\| < {{CONFIG_CONVERGENCE_TOL}}$ with a maximum iteration limit of $N_{\max} = {{CONFIG_MAX_ITERATIONS}}$.
-
-## Numerical Stability Grid
-
-To validate robustness, the optimizer is exercised across a grid of {{CONFIG_NUM_STABILITY_STARTS}} starting points and {{CONFIG_NUM_STABILITY_STEPS}} step sizes, producing {{CONFIG_STABILITY_CELLS}} total evaluations. This comprehensive sweep confirms that convergence is not an artifact of a narrow parameter choice. The stability metric is computed for the `{{STABILITY_FUNCTION}}` objective via `infrastructure.scientific.stability.check_numerical_stability()`.
-
-## Dimensional Scaling
-
-Performance benchmarking spans problem dimensions $d \in \{{{CONFIG_BENCHMARK_DIMS}}\}$, from the scalar case ($d = {{CONFIG_BENCHMARK_MIN_DIM}}$) to moderate dimensionality ($d = {{CONFIG_BENCHMARK_MAX_DIM}}$), using identity-Hessian quadratics to isolate algorithmic scaling from problem conditioning effects. The tracked `output/reports/performance_benchmark.json` records fixed inputs, exact objective values, and validation checks. Wall-clock timing is retained only as a runtime diagnostic because host load and hardware make microsecond values unsuitable as pinned reproducibility claims.
-
-## Computational Environment
-
-- **Python**: {{PYTHON_VERSION}}
-- **NumPy**: {{NUMPY_VERSION}}
-- **Platform**: {{PLATFORM}}
-- **Generated**: {{GENERATION_TIMESTAMP}}
-
-## Pipeline ordering
-
-Typical `die_another_day` analysis order (see `scripts/pipeline/stage_02_analysis.py` discovery) is:
-
-1. `optimization_analysis.py` — writes `output/data/optimization_results.csv`, `output/figures/*.png`, and JSON reports under `output/reports/`.
-2. `z_generate_manuscript_variables.py` — reads the CSV and YAML, emits `output/data/manuscript_variables.json`, and writes substituted copies to `output/manuscript/` for rendering.
-3. `generate_api_docs.py` — refreshes API markdown consumed by documentation targets.
-
-PDF compilation then reads from `output/manuscript/` so that figure paths and numeric tables match the analysis that just completed.
-
-## Relation to figures
-
-| Figure ([@sec:results]) | Primary inputs |
-|--------------------|------------------|
-| Convergence trajectories | `experiment.step_sizes`, `initial_point`, `tolerance`, `max_iterations` |
-| Step-size sensitivity | Dense $\alpha$ sweep internal to `generate_step_size_sensitivity_plot()` |
-| Convergence rate | Same trajectories as above; tolerance line uses `convergence_tolerance` |
-| Complexity quad panel | One bar chart per row of `optimization_results.csv` |
-| Stability heatmap | `stability_starting_points` $\times$ `stability_step_sizes` |
-| Dimensional benchmark | `benchmark_dimensions`, fixed $\alpha=0.1$, internal tol $10^{-10}$ |
-
-This table is descriptive documentation only; it is not executed as code during the build.
+- Python: {{PYTHON_VERSION}}
+- Variables generated: {{GENERATION_TIMESTAMP}} (UTC)
