@@ -20,9 +20,16 @@ __all__ = ["render_hypothermia_curve", "render_identity_drift", "render_pass_pro
 
 
 def _save(fig: plt.Figure, out_path: Path) -> Path:
+    """Write a figure to ``out_path`` with reproducible PNG bytes.
+
+    Matplotlib stamps a ``Date`` chunk into PNG metadata by default, which
+    would make two identical renders differ byte-for-byte. Suppressing it
+    (``Date: None``) makes figure output byte-reproducible, which
+    ``tests/test_figures.py`` asserts directly.
+    """
     path = Path(out_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=150, bbox_inches="tight", metadata={"Date": None, "Software": None})
     plt.close(fig)
     return path
 

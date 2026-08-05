@@ -20,6 +20,7 @@ from die_another_day import CODENAME, CONCEPT_MODULES, IDENTITY, __version__  # 
 
 
 def main() -> int:
+    """Print the package identity and the frozen protocol surface."""
     surface = protocol_surface()
     print(f"Mission identity: {IDENTITY}")
     print(f"Mission codename: {CODENAME}")

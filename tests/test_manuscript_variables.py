@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from die_another_day import manuscript_variables as mv
+from die_another_day.mission_results import run_all_concepts
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -98,3 +99,63 @@ def test_live_cross_reference_all_section_tokens_generated() -> None:
             if token not in variables:
                 missing.append(f"{source.name}:{token}")
     assert missing == []
+
+
+def test_measured_tokens_are_the_mission_numbers() -> None:
+    """Every measured token must equal the value the concept runner produced."""
+    config = mv.load_manuscript_config()
+    results = run_all_concepts(config)
+    variables = mv.generate_variables()
+
+    assert variables["ID_REPLACED_SCORE"] == f"{results.identity_replaced.score:.2f}"
+    assert variables["ID_CHI2_THRESHOLD"] == f"{results.identity_replaced.threshold:.2f}"
+    assert variables["ID_GENUINE_SCORE"] == f"{results.identity_genuine.score:.2f}"
+    assert variables["SEQ_LONGEST_BLOCK"] == str(results.longest_edit_block)
+    assert variables["SEQ_REPLACED_EDIT_DISTANCE"] == str(results.sequence_replaced.edit_distance)
+    assert variables["ICE_SAFE_EXPOSURE_S"] == f"{results.ice.safe_exposure_s:.1f}"
+    assert variables["ICE_SQUADS"] == str(results.ice.rotation.squad_count)
+    assert variables["HYP_MARGIN_S"] == f"{results.rescue.margin_s:.1f}"
+    assert variables["STRUCT_SAFETY_FACTOR"] == f"{results.structure.safety_factor:.2f}"
+    assert variables["MIRROR_N_FEASIBLE"] == str(results.mirror.n_feasible)
+    assert variables["MIRROR_BEST_FLUX_W_M2"] == f"{results.mirror.best_flux_w_m2:.2f}"
+
+
+def test_measured_tokens_track_the_configuration(tmp_path: Path) -> None:
+    """A configuration change must move the measured token, not just the input one.
+
+    This is what stops a measured token from silently freezing into a constant.
+    """
+    config = mv.load_manuscript_config()
+    thicker = dict(config)
+    thicker["concepts"] = {
+        **config["concepts"],
+        "ice_structure": {**config["concepts"]["ice_structure"], "thickness_cm": 60.0},
+    }
+    cfg_path = tmp_path / "thicker.yaml"
+    cfg_path.write_text(yaml.safe_dump(thicker), encoding="utf-8")
+
+    baseline = mv.generate_variables()
+    changed = mv.generate_variables(config_path=cfg_path)
+    assert changed["STRUCT_THICKNESS_CM"] == "60"
+    assert float(changed["STRUCT_CAPACITY_TONS"]) > float(baseline["STRUCT_CAPACITY_TONS"])
+    assert float(changed["STRUCT_SAFETY_FACTOR"]) > float(baseline["STRUCT_SAFETY_FACTOR"])
+
+
+def test_include_measured_false_is_config_only() -> None:
+    config_only = mv.generate_variables(include_measured=False)
+    assert "NUM_BIOMARKERS" in config_only
+    assert "ID_REPLACED_SCORE" not in config_only
+
+
+def test_every_generated_token_is_used_by_the_manuscript() -> None:
+    """No orphan tokens: a generated token nobody cites is dead weight.
+
+    ``PYTHON_VERSION`` / ``GENERATION_TIMESTAMP`` are environment stamps and are
+    exempt only if a section actually cites them, which it does.
+    """
+    variables = mv.generate_variables()
+    corpus = "\n".join(
+        source.read_text(encoding="utf-8") for source in sorted((ROOT / "manuscript").glob("[0-9][0-9]_*.md"))
+    )
+    unused = sorted(token for token in variables if "{{" + token + "}}" not in corpus)
+    assert unused == [], f"tokens generated but never cited: {unused}"

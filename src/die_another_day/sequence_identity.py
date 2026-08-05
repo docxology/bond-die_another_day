@@ -175,11 +175,11 @@ def kmer_jaccard(a: str, b: str, k: int) -> float:
         raise ValueError("k must be >= 1")
     if len(a) < k or len(b) < k:
         return 0.0
+    # Both sequences are at least k long here, so each k-mer set is non-empty
+    # and the union can never be empty — no unreachable empty-union branch.
     kmers_a = {a[i : i + k] for i in range(len(a) - k + 1)}
     kmers_b = {b[i : i + k] for i in range(len(b) - k + 1)}
     union = kmers_a | kmers_b
-    if not union:
-        return 0.0
     return float(len(kmers_a & kmers_b) / len(union))
 
 

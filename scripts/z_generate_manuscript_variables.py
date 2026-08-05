@@ -26,6 +26,7 @@ from die_another_day.manuscript_variables import generate_variables, resolve_man
 
 
 def main() -> int:
+    """Hydrate manuscript tokens and write the resolved manuscript tree."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-draft", action="store_true", help="write even if tokens remain unresolved")
     parser.add_argument("--config", default=None, help="path to manuscript/config.yaml")

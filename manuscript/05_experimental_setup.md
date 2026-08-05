@@ -2,8 +2,10 @@
 
 All mission parameters are declared once in `manuscript/config.yaml` under the
 `concepts:` block and consumed by the code via
-`src/die_another_day/manuscript_variables.py`. They are reproduced here as
-mission tokens so the manuscript cannot drift from the configuration.
+`src/die_another_day/mission_results.py`. They are reproduced here as mission
+tokens so the manuscript cannot drift from the configuration. Package identity:
+`{{MISSION_IDENTITY}}` (codename {{MISSION_CODENAME}}), deterministic seed
+{{MISSION_SEED}}.
 
 ## Identity detection
 
@@ -47,6 +49,9 @@ mission tokens so the manuscript cannot drift from the configuration.
 
 - Orbit semi-major axis: {{ORBIT_SMA_KM}} km
 - Orbit inclination: {{ORBIT_INCLINATION_DEG}} deg
+- Ground target: {{ORBIT_TARGET_LAT_DEG}} N, {{ORBIT_TARGET_LON_DEG}} E
+- Pass window: {{ORBIT_DURATION_S}} s sampled every {{ORBIT_DT_S}} s
+  ({{MIRROR_PASS_SAMPLES}} instants)
 - Mirror area: {{MIRROR_AREA_M2}} m^2
 - Mirror reflectivity: {{MIRROR_REFLECTIVITY}}
 - Beam half-angle: {{MIRROR_BEAM_HALF_ANGLE_DEG}} deg
@@ -55,4 +60,14 @@ mission tokens so the manuscript cannot drift from the configuration.
 ## Software environment
 
 - Python: {{PYTHON_VERSION}}
+- Concept modules ({{NUM_CONCEPTS}}): {{CONCEPT_MODULES}}
 - Variables generated: {{GENERATION_TIMESTAMP}} (UTC)
+
+## What is configured versus what is measured
+
+The lists above are *inputs*: every one is a literal in
+`manuscript/config.yaml`. Everything in §03 is an *output*: it comes from
+running the models on these inputs. The two families are formatted by different
+code paths (`generate_variables` for inputs, `measured_variables` for outputs)
+and a test asserts that each measured token equals the value the concept runner
+produced, so an input can never be quietly presented as a result.

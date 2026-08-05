@@ -1,72 +1,67 @@
 # die_another_day TODO
 
-Forward-only backlog for the ICARUS film package (Die Another Day, 2002),
-mission codename **ICARUS**, in the PROJECT BOND suite.
+Forward-only backlog for the ICARUS film package (*Die Another Day*, 2002) in
+the PROJECT BOND suite. Completed work is not listed here — the code, the
+manuscript, and `docs/` describe what exists. This file is only what is *not*
+done.
 
-## Status — Phase 4 (deep improvement)
+## Open work
 
-Six pure deterministic domain modules behind a frozen-protocol
-`MissionProvider`, plus per-phase thin CLIs, token-hydrated manuscript, four
-concept figures, and a zero-mock test suite.
+### 1. Robust covariance for heavy-tailed biomarkers
 
-- `identity_detection.py` — gene-therapy-grade biometric identity-replacement
-  detection (Mahalanobis trait drift + coherent per-marker z-flags).
-- `sequence_identity.py` — DNA sequence identity verification (Levenshtein
-  edit distance + k-mer Jaccard + contiguous edit-block detection).
-- `ice_ops.py` — ice-palace cold-environment air operations planning
-  (Newton-cooling exposure ceilings + rotation roster + thermal/heating
-  metrics).
-- `hypothermia.py` — cold-water immersion core-temperature model and rescue
-  feasibility against the clinical hypothermia timeline.
-- `ice_structure.py` — ice-palace structural integrity (Gold load-capacity
-  rule + thermal-gradient stress / cracking threshold).
-- `orbital_mirror.py` — orbital-mirror (ICARUS) targeting geometry
-  (circular-orbit propagation, reflection-law pointing, solar-flux delivery).
-- `mission.py` — implements the frozen BOND-API `MissionProvider`; registers
-  all six concept functions as gadgets in the BOND-API `GadgetRegistry`.
+`identity_detection.estimate_profile` fits a plain sample covariance with a
+ridge term. A single extreme enrolment sample therefore inflates the covariance
+and desensitises the screen. Add an optional robust estimator (minimum
+covariance determinant, or a simple trimmed estimate) behind a keyword
+argument, and a test that shows the plain estimator missing a replacement that
+the robust one catches. Keep the default unchanged so existing numbers hold.
 
-## Current validation evidence
+### 2. Unaligned sequence reads
 
-- Tests + coverage gate: `uv run pytest tests/ --cov=src --cov-fail-under=90`
-  (>98% line + branch on `src/`; live numbers ->
-  [`docs/_generated/COUNTS.md`](../../../docs/_generated/COUNTS.md))
-- Code quality: `uv run ruff check src/ scripts/ tests/` and
-  `uv run mypy src/ scripts/` both pass clean.
-- No mocks: `grep -r "unittest.mock\|MagicMock\|@patch\|create_autospec" tests/`
-- Manuscript token gate: `uv run python scripts/z_generate_manuscript_variables.py`
-  (strict; unresolved `{{TOKEN}}` fails) + live cross-reference in
-  `tests/test_manuscript_variables.py`.
-- Determinism: fixed seed `7`; provenance `wall_time_s = 0.0`; mission outcome
-  byte-reproducible.
+`verify_identity` requires equal-length reference and probe. Real reads are not
+pre-aligned. Either add a lightweight alignment step before the contiguous-block
+test, or document the precondition as a hard interface requirement and reject
+unaligned input with a clearer error than the current length check. The
+Levenshtein distance already tolerates indels; the block detector does not.
 
-## Integration points (declared)
+### 3. Conical eclipse and finite solar disc
 
-- **bond-api** (frozen, dependency) — implemented via path dependency in
-  `pyproject.toml`; the mission adapter imports `bond_api.protocol` /
-  `bond_api.registry` / `bond_api.serialization`. Public `MissionProvider`
-  shape and the module-level `ICARUS_GADGETS` GadgetRegistry are unchanged, so
-  bond-cli / coordinator / orchestrator discovery is stable.
-- **bond-utilities** — not yet converted to a real utilities package; if/when
-  it lands, delegate provenance persistence (`mission_io.record_provenance_outcome`).
-  Pure core stays infrastructure-free either way.
-- **bond-orchestrator / bond-cli** — consume this film via slug discovery
-  (`load_provider("die_another_day")` on `sys.path`); no film internals.
+`orbital_mirror.in_shadow` uses a cylindrical shadow, so penumbra is treated as
+full sunlight. The solar disc is also treated as a point source, which
+understates the achievable spot size. Both are acceptable for feasibility
+questions and inadequate for illumination engineering. Upgrading these is the
+single largest fidelity gain available in this module.
 
-## Known gaps / constraints
+### 4. Per-operative thermal parameters
 
-- Orbital solar ephemeris is low-precision (coarse unit vector); adequate for
-  feasibility modelling, not precise illumination engineering.
-- Biomarker distribution assumed Gaussian; heavy-tailed traits would need
-  robust covariance estimation.
-- DNA sequence model assumes equal-length reads (indel-tolerant via edit
-  distance, but verification requires aligned length).
-- Single circular orbit per pass; no constellation or propagation-error model.
+`ice_ops.plan_briefing` uses one Newton decay rate for the whole squad, and
+`plan_rotation` assumes instantaneous handover. A per-operative rate (suit,
+body composition) and a handover cost would make the roster a scheduling
+problem rather than a division.
 
-## Ordered improvement ladder
+### 5. Ice-structure dynamics
 
-1. Keep all six pure concepts deterministic and standalone; any math change
-   must keep the test suite green.
-2. When bond-utilities ships, adopt `mission_io.record_provenance_outcome` for
-   outcome persistence.
-3. Optionally add a robust-covariance layer to identity detection.
-4. Refresh generated docs / figures after any public-surface change.
+`ice_structure` is a static check: bearing capacity plus thermal stress at one
+instant. It does not model creep under sustained load, crack propagation once
+the tensile limit is passed, or repeated loading. A time-dependent model would
+turn the current pass/fail into a time-to-failure.
+
+## Integration points
+
+- **bond-api** (frozen dependency) — implemented via a path dependency. The
+  `MissionProvider` shape and the module-level `ICARUS_GADGETS` registry are
+  unchanged and must stay that way; bond-cli, the coordinator reconcile, and the
+  orchestrator all consume them.
+- **bond-utilities** — not yet adopted here. If and when it provides
+  `mission_io.record_provenance_outcome`, delegate outcome persistence to it.
+  The pure core stays infrastructure-free either way.
+- **bond-orchestrator / bond-cli** — consume this film through slug discovery
+  (`load_provider("die_another_day")`); they never reach into film internals.
+
+## Standing constraints (not tasks — do not "resolve" these)
+
+- Seed stays `7`; changing it changes every reported number.
+- `mission_results.run_all_concepts` stays the single execution path. A second
+  path is how the manuscript starts disagreeing with the code.
+- Coverage floor is 90% line and branch; do not quote the measured percentage in
+  prose anywhere in this package.

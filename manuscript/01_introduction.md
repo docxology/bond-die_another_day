@@ -18,11 +18,19 @@ An ICARUS-class special agent operates across three theatres, each encoded in
 3. `orbital_mirror.py` — aim an orbiting solar mirror at a ground target,
    solving the line-of-sight and reflection geometry.
 
-A thin adapter, `mission.py`, implements the frozen BOND-API
-`MissionProvider` protocol so the orchestrator can discover and run the film
-by slug on `sys.path`. The pure domain modules remain importable without
-`bond_api`; only the adapter couples the two layers.
+Two further modules complete the package without adding domain science.
+`mission_results.py` is the single deterministic runner: it reads the
+configuration, executes all {{NUM_CONCEPTS}} models once under seed
+{{MISSION_SEED}}, and returns one frozen record. `mission.py` is a thin adapter
+that turns that record into the frozen BOND-API `MissionProvider` contract, so
+the orchestrator can discover and run the film by slug on `sys.path`. The pure
+domain modules remain importable without `bond_api`; only the adapter couples
+the two layers.
+
+That structure is what lets this manuscript state measured numbers safely: the
+results in §03 and the mission's own `MissionOutcome` are formatted from the
+same record, so there is no second code path along which they could drift.
 
 The remainder of this manuscript documents the methodology (§02), results
-(§03), experimental setup (§05), and reproducibility guarantees (§06) of the
-package.
+(§03), scope and limitations (§07), experimental setup (§05), and
+reproducibility guarantees (§06) of the package.

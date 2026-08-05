@@ -11,10 +11,15 @@ an operations plan:
   can remain exposed before their core temperature reaches ``critical_temp``.
 * :func:`plan_rotation` divides a total op duration into rotating squads so no
   squad exceeds its safe exposure, and reports the resulting roster.
-* :func:`thermal_load` integrates cold exposure (degree-seconds below comfort)
-  as a physiological stress metric.
-* :func:`heating_energy` sizes the power needed to hold an indoor space at a
-  comfort temperature against the cold ambient.
+* :func:`thermal_load` integrates the operative's core-temperature depression
+  below normothermia (degree-seconds) as a physiological cold-strain metric.
+  The reference is normothermia (37 C), **not** room comfort: a survivable
+  plan never lets the core fall below a 20 C room-comfort line, so a
+  comfort-referenced integral would report exactly zero for every valid
+  operation and could never discriminate one plan from another.
+* :func:`heating_energy` sizes the power needed to hold an indoor *space* at a
+  room-comfort temperature against the cold ambient — that one genuinely is a
+  comfort-referenced quantity.
 
 All functions are pure and deterministic — given the same physical parameters
 they return identical plans.
@@ -28,7 +33,9 @@ from math import ceil
 import numpy as np
 
 __all__ = [
+    "DEFAULT_COMFORT_C",
     "IceOpsPlan",
+    "NORMOTHERMIA_C",
     "RotationPlan",
     "exposure_temperature",
     "heating_energy",
@@ -38,8 +45,12 @@ __all__ = [
     "thermal_load",
 ]
 
-#: Comfort temperature (Celsius) used for thermal-load and heating sizing.
+#: Room-comfort temperature (Celsius) used to size *space* heating.
 DEFAULT_COMFORT_C = 20.0
+
+#: Normothermic human core temperature (Celsius) — the physiological reference
+#: for the cold-strain integral.
+NORMOTHERMIA_C = 37.0
 
 
 @dataclass(frozen=True)
@@ -62,7 +73,12 @@ class RotationPlan:
 
 @dataclass(frozen=True)
 class IceOpsPlan:
-    """Complete cold-environment briefing for an ice-palace operation."""
+    """Complete cold-environment briefing for an ice-palace operation.
+
+    ``thermal_load_deg_s`` is the per-shift core depression below
+    ``reference_temp_c`` (normothermia); ``heating_energy_j`` is the space
+    heating needed to hold the room at ``comfort_temp_c``.
+    """
 
     safe_exposure_s: float
     rotation: RotationPlan
@@ -72,6 +88,7 @@ class IceOpsPlan:
     body_temp_c: float
     critical_temp_c: float
     comfort_temp_c: float
+    reference_temp_c: float
 
 
 def _validate_temps(body_temp: float, critical_temp: float, env_temp: float) -> None:
@@ -152,18 +169,28 @@ def thermal_load(
     env_temp: float,
     decay_rate: float,
     exposure_s: float,
-    comfort_temp: float = DEFAULT_COMFORT_C,
+    reference_temp: float = NORMOTHERMIA_C,
 ) -> float:
-    """Integrated cold stress: degree-seconds the body spends below comfort.
+    """Integrated cold strain: degree-seconds of core depression below normothermia.
 
-    Returns :math:`\\int_0^{exposure} \\max(0,\\, comfort - T(t))\\, dt`,
-    evaluated on a fine deterministic grid (degree-seconds).
+    Returns :math:`\\int_0^{E} \\max(0,\\, T_\\text{ref} - T(t))\\, dt` in
+    degree-seconds, evaluated on a fine deterministic grid. With the default
+    reference (``body_temp`` starting at normothermia) this has the exact
+    closed form :math:`(T_0-T_e)\\left[E - (1-e^{-kE})/k\\right]`, which
+    ``tests/test_ice_ops.py`` checks the quadrature against.
+
+    Args:
+        body_temp: Core temperature at exposure start (C).
+        env_temp: Ambient temperature (C).
+        decay_rate: Newton cooling constant (1/s).
+        exposure_s: Exposure duration (s); non-positive returns ``0.0``.
+        reference_temp: Reference the depression is measured from (C).
     """
     if exposure_s <= 0.0:
         return 0.0
     grid = np.linspace(0.0, exposure_s, 2048)
     temps = env_temp + (body_temp - env_temp) * np.exp(-decay_rate * grid)
-    deficit = np.maximum(0.0, comfort_temp - temps)
+    deficit = np.maximum(0.0, reference_temp - temps)
     return float(np.trapezoid(deficit, grid))
 
 
@@ -197,10 +224,16 @@ def plan_briefing(
     thermal_conductance: float = 1500.0,
     comfort_temp_c: float = DEFAULT_COMFORT_C,
 ) -> IceOpsPlan:
-    """Assemble a full ice-palace operations briefing from the physical inputs."""
+    """Assemble a full ice-palace operations briefing from the physical inputs.
+
+    Cold strain is integrated against the operative's own starting core
+    temperature (normothermia), while space heating is sized against the room
+    comfort temperature — two different references for two different physical
+    questions.
+    """
     safe_exposure_s = seconds_to_critical(body_temp_c, critical_temp_c, env_temp_c, decay_rate)
     rotation = plan_rotation(num_operatives, op_duration_s, safe_exposure_s)
-    load = thermal_load(body_temp_c, env_temp_c, decay_rate, rotation.shift_duration_s, comfort_temp_c)
+    load = thermal_load(body_temp_c, env_temp_c, decay_rate, rotation.shift_duration_s, body_temp_c)
     energy = heating_energy(env_temp_c, op_duration_s, thermal_conductance, comfort_temp_c)
     return IceOpsPlan(
         safe_exposure_s=safe_exposure_s,
@@ -211,4 +244,5 @@ def plan_briefing(
         body_temp_c=body_temp_c,
         critical_temp_c=critical_temp_c,
         comfort_temp_c=comfort_temp_c,
+        reference_temp_c=body_temp_c,
     )

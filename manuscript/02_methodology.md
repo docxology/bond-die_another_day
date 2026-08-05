@@ -1,7 +1,21 @@
 # Methodology
 
 The mission's concepts rest on a set of mathematical cores, each pure and
-deterministic.
+deterministic. All {{NUM_CONCEPTS}} of them ({{CONCEPT_MODULES}}) are driven
+from one place, `mission_results.run_all_concepts`, described in §*Execution
+and control structure* below.
+
+## Positive and negative controls
+
+Each identity model is exercised with a matched pair, not a single case. The
+positive control is a constructed replacement; the negative control is a
+genuine subject. The negative control is chosen so that clearing the screen is
+a measurement rather than an identity: for the biometric model it is a fresh
+out-of-sample draw from the enrolled population (which carries real, non-zero
+drift), not the profile mean (which would score exactly zero by construction).
+For the sequence model it is a read carrying scattered single-base sequencing
+noise, so the discriminating power of the contiguous-block rule is what is
+actually being tested.
 
 ## Biometric identity-replacement detection (`identity_detection.py`)
 
@@ -41,8 +55,17 @@ Newton's law of cooling, $T(t) = T_e + (T_0 - T_e)e^{-kt}$, giving a closed-form
 safe exposure $t_{\text{crit}} = \frac{1}{k}\ln\frac{T_0 - T_e}{T_{\text{crit}} - T_e}$.
 With ambient $T_e = $ {{ICE_ENV_TEMP_C}} C, the planner partitions an
 {{ICE_OP_DURATION_S}}-second operation into rotating squads of
-{{ICE_NUM_OPERATIVES}} operatives so no squad exceeds the ceiling; cold stress
-(degree-seconds below comfort) and heating energy size the resource.
+{{ICE_NUM_OPERATIVES}} operatives so no squad exceeds the ceiling.
+
+Two further quantities size the resource, and they use *different* references
+on purpose. Cold strain is
+$\int_0^{E}\max(0,\, T_0 - T(t))\,\mathrm{d}t$ in degree-seconds, referenced to
+normothermia ($T_0 =$ {{ICE_BODY_TEMP_C}} C) — referencing it to room comfort
+(20 C) would return exactly zero for every survivable shift, since a shift ends
+at the {{ICE_CRITICAL_TEMP_C}} C critical core temperature, well above comfort,
+and the metric could then never discriminate one plan from another. Space
+heating, by contrast, genuinely is comfort-referenced: it is the conductance
+times the room-to-ambient deficit times the operation duration.
 
 ## Cold-water hypothermia risk (`hypothermia.py`)
 
@@ -72,12 +95,39 @@ the gradient risks cracking.
 
 The mirror is placed on a circular orbit (semi-major axis {{ORBIT_SMA_KM}} km,
 inclination {{ORBIT_INCLINATION_DEG}} deg) and propagated by its mean anomaly.
-The ground target is located in the same inertial frame via sidereal time. At
-each instant the mirror normal $\hat{n}$ satisfies the reflection law -- it
-bisects the incoming solar ray $\hat{s}$ and the ground re-point $\hat{r}$:
-$\hat{n} \propto \hat{s} + \hat{r}$. Targeting is feasible when the mirror is
-sunlit, above the {{MIRROR_MIN_ELEVATION_DEG}}-degree horizon, and the
-incidence angle is positive. Delivered power is the solar constant times mirror
-area ({{MIRROR_AREA_M2}} m^2) times reflectivity ({{MIRROR_REFLECTIVITY}}) times
-the cosine of incidence; flux at the target follows from the focused beam
-spread.
+The ground target ({{ORBIT_TARGET_LAT_DEG}} N, {{ORBIT_TARGET_LON_DEG}} E) is
+located in the same inertial frame via Greenwich mean sidereal time. At each
+instant the mirror normal $\hat{n}$ satisfies the reflection law -- it bisects
+the incoming solar ray $\hat{s}$ and the ground re-point $\hat{r}$:
+$\hat{n} \propto \hat{s} + \hat{r}$, so the incidence angle
+$\arccos(\hat{n}\cdot\hat{s})$ is exactly half the Sun-mirror-target angle.
+
+The incoming ray uses the *parallel-ray* approximation: at 1 au the Sun's
+direction from the mirror is the solar unit vector itself, and the ~7e6 m orbit
+radius shifts it by well under an arcsecond. Forming that ray by subtracting
+the satellite position from a unit solar vector would instead yield the nadir
+direction, and the resulting incidence angle would be wrong by tens of degrees;
+`tests/test_orbital_mirror.py` pins the incidence angle to the analytic
+half-angle to keep that failure mode from returning.
+
+When the target direction is anti-parallel to the solar ray the bisector
+degenerates — no orientation folds a 180-degree turn — and the instant is
+reported infeasible with zero delivered power rather than raising. Targeting is
+otherwise feasible when the mirror is sunlit (outside Earth's cylindrical
+shadow) and above the {{MIRROR_MIN_ELEVATION_DEG}}-degree horizon. Delivered
+power is the solar constant times mirror area ({{MIRROR_AREA_M2}} m^2) times
+reflectivity ({{MIRROR_REFLECTIVITY}}) times the cosine of incidence; flux at
+the target follows from the beam spread, whose half-angle is the configured
+{{MIRROR_BEAM_HALF_ANGLE_DEG}} deg plus the mirror's own apparent angular
+radius at range.
+
+## Execution and control structure
+
+The six models are not invoked ad hoc. `mission_results.run_all_concepts` reads
+the `concepts:` block of `manuscript/config.yaml`, runs every model once under
+seed {{MISSION_SEED}}, and returns a frozen `ConceptResults` record. Two
+consumers read that record and only that record: `mission.py`, which serialises
+it into the frozen BOND-API `MissionOutcome`, and `manuscript_variables.py`,
+which formats it into the measured manuscript tokens this paper cites. A number
+printed here is therefore the same value the mission reported, not a
+transcription of it.

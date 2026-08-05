@@ -19,6 +19,7 @@ from bond_api.discovery import load_provider  # noqa: E402
 
 
 def main() -> int:
+    """Run the mission through debrief and print the lessons learned."""
     provider = load_provider("die_another_day", search_paths=[SRC])
     brief = provider.brief()
     plan = provider.plan(brief)

@@ -19,6 +19,7 @@ from bond_api.discovery import load_provider  # noqa: E402
 
 
 def main() -> int:
+    """Load the provider by slug and print the mission brief."""
     provider = load_provider("die_another_day", search_paths=[SRC])
     brief = provider.brief()
     print(f"Film: {brief.film} ({brief.codename})")

@@ -26,6 +26,7 @@ from bond_api.serialization import to_json  # noqa: E402
 
 
 def main() -> int:
+    """Run the full five-stage ICARUS mission and print the outcome JSON."""
     provider = load_provider("die_another_day", search_paths=[SRC])
     brief = provider.brief()
     report = provider.recon(ReconRequest(goal="survey available assets and constraints"))

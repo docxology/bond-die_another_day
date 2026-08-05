@@ -1,10 +1,16 @@
 """Manuscript variable hydration for ICARUS.
 
 Every ``{{TOKEN}}`` in ``manuscript/[0-9]*.md`` resolves through
-:func:`generate_variables`, which reads ``manuscript/config.yaml`` plus the
-frozen protocol identity. Metrics are never hand-authored in prose — they flow
-through this module so the manuscript cannot drift from the code or the
-configured mission parameters.
+:func:`generate_variables`. Tokens come in two families and neither is ever
+hand-authored in prose:
+
+* **configured inputs** — read straight from ``manuscript/config.yaml``
+  (marker count, genome length, ambient temperature, orbital elements, ...);
+* **measured outputs** — produced by actually running the six concept models
+  through :func:`die_another_day.mission_results.run_all_concepts`, the very
+  same entry point :mod:`die_another_day.mission` uses for its
+  ``MissionOutcome``. Every measured number in the paper is therefore the
+  number the mission computed, not a transcription of it.
 
 The consuming orchestrator is ``scripts/z_generate_manuscript_variables.py``
 (thin wrapper); the live cross-reference gate lives in
@@ -22,8 +28,20 @@ from typing import Any
 import yaml
 
 from die_another_day import CODENAME, CONCEPT_MODULES, IDENTITY
+from die_another_day.hypothermia import (
+    MILD_THRESHOLD_C,
+    MODERATE_THRESHOLD_C,
+    SEVERE_THRESHOLD_C,
+    hypothermia_stage,
+)
+from die_another_day.mission_results import ConceptResults, run_all_concepts
 
-__all__ = ["generate_variables", "load_manuscript_config", "resolve_manuscript_tree"]
+__all__ = [
+    "generate_variables",
+    "load_manuscript_config",
+    "measured_variables",
+    "resolve_manuscript_tree",
+]
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PACKAGE_ROOT / "manuscript" / "config.yaml"
@@ -46,6 +64,80 @@ def _num(value: Any) -> str:
     return str(int(f)) if f.is_integer() else f"{f:g}"
 
 
+def _fixed(value: float, digits: int) -> str:
+    """Format a measured number at a fixed number of decimal places."""
+    return f"{float(value):.{digits}f}"
+
+
+def measured_variables(results: ConceptResults) -> dict[str, str]:
+    """Turn one deterministic concept run into the manuscript's measured tokens.
+
+    Args:
+        results: The output of
+            :func:`die_another_day.mission_results.run_all_concepts`.
+
+    Returns:
+        A ``{{TOKEN}}`` → formatted-value mapping covering every number the
+        results and conclusion sections state.
+    """
+    replaced = results.identity_replaced
+    genuine = results.identity_genuine
+    seq_replaced = results.sequence_replaced
+    seq_genuine = results.sequence_genuine
+    ice = results.ice
+    rescue = results.rescue
+    structure = results.structure
+    mirror = results.mirror
+    best_time_s = mirror.points[mirror.best_index].time_s if mirror.best_index is not None else 0.0
+
+    return {
+        # --- identity (biometric) -------------------------------------------
+        "ID_METHOD": replaced.method,
+        "ID_REPLACED_SCORE": _fixed(replaced.score, 2),
+        "ID_REPLACED_FLAGGED": str(replaced.n_flagged),
+        "ID_CHI2_THRESHOLD": _fixed(replaced.threshold, 2),
+        "ID_GENUINE_SCORE": _fixed(genuine.score, 2),
+        "ID_GENUINE_P_VALUE": _fixed(genuine.p_value, 3),
+        "ID_GENUINE_FLAGGED": str(genuine.n_flagged),
+        # --- identity (sequence) --------------------------------------------
+        "SEQ_METHOD": seq_replaced.method,
+        "SEQ_GENUINE_JACCARD_MEASURED": _fixed(seq_genuine.jaccard, 4),
+        "SEQ_GENUINE_HAMMING": str(seq_genuine.hamming),
+        "SEQ_GENUINE_LONGEST_RUN": str(results.genuine_longest_run),
+        "SEQ_REPLACED_JACCARD_MEASURED": _fixed(seq_replaced.jaccard, 4),
+        "SEQ_REPLACED_EDIT_DISTANCE": str(seq_replaced.edit_distance),
+        "SEQ_LONGEST_BLOCK": str(results.longest_edit_block),
+        # --- ice-palace air operations --------------------------------------
+        "ICE_SAFE_EXPOSURE_S": _fixed(ice.safe_exposure_s, 1),
+        "ICE_SQUADS": str(ice.rotation.squad_count),
+        "ICE_SHIFT_S": _fixed(ice.rotation.shift_duration_s, 1),
+        "ICE_THERMAL_LOAD_DEG_S": _fixed(ice.thermal_load_deg_s, 1),
+        "ICE_HEATING_ENERGY_MJ": _fixed(ice.heating_energy_j / 1e6, 1),
+        # --- cold-water hypothermia -----------------------------------------
+        "HYP_MILD_THRESHOLD_C": _num(MILD_THRESHOLD_C),
+        "HYP_MODERATE_THRESHOLD_C": _num(MODERATE_THRESHOLD_C),
+        "HYP_SEVERE_THRESHOLD_C": _num(SEVERE_THRESHOLD_C),
+        "HYP_REACH_TIME_S": _fixed(rescue.reach_time_s, 1),
+        "HYP_TIME_TO_SEVERE_S": _fixed(rescue.time_to_severe_s, 1),
+        "HYP_MARGIN_S": _fixed(rescue.margin_s, 1),
+        "HYP_CORE_AT_REACH_C": _fixed(rescue.core_temp_at_reach_c, 2),
+        "HYP_STAGE_AT_REACH": hypothermia_stage(rescue.core_temp_at_reach_c),
+        # --- ice-structure integrity ----------------------------------------
+        "STRUCT_CAPACITY_TONS": _fixed(structure.capacity_tons, 2),
+        "STRUCT_SAFETY_FACTOR": _fixed(structure.safety_factor, 2),
+        "STRUCT_THERMAL_STRESS_MPA": _fixed(structure.thermal_stress_mpa, 2),
+        "STRUCT_CRITICAL_DELTA_T_C": _fixed(structure.critical_delta_t_c, 2),
+        "STRUCT_CRACK_RISK": "yes" if structure.crack_risk else "no",
+        # --- orbital-mirror targeting ---------------------------------------
+        "MIRROR_PASS_SAMPLES": str(len(mirror.points)),
+        "MIRROR_FEASIBLE_S": _fixed(mirror.feasible_seconds, 0),
+        "MIRROR_N_FEASIBLE": str(mirror.n_feasible),
+        "MIRROR_BEST_TIME_S": _fixed(best_time_s, 0),
+        "MIRROR_BEST_FLUX_W_M2": _fixed(mirror.best_flux_w_m2, 2),
+        "MISSION_SEED": str(results.seed),
+    }
+
+
 def load_manuscript_config(config_path: str | Path | None = None) -> dict[str, Any]:
     """Load and validate ``manuscript/config.yaml`` (or an explicit path)."""
     path = Path(config_path) if config_path is not None else DEFAULT_CONFIG_PATH
@@ -62,6 +154,7 @@ def generate_variables(
     *,
     config_path: str | Path | None = None,
     require_outputs: bool = True,
+    include_measured: bool = True,
 ) -> dict[str, str]:
     """Compute the ``{{TOKEN}}`` → value mapping for the manuscript.
 
@@ -69,6 +162,10 @@ def generate_variables(
         config_path: Override for ``manuscript/config.yaml``.
         require_outputs: When True (default), verify the ``concepts`` block is
             present and non-empty — the strict-mode gate.
+        include_measured: When True (default), actually run the six concept
+            models and merge in the measured-output tokens. Set False only for
+            a fast configuration-only inspection; the manuscript itself always
+            needs the measured half.
     """
     config = load_manuscript_config(config_path)
     paper = config.get("paper", {})
@@ -84,7 +181,7 @@ def generate_variables(
     structure = concepts.get("ice_structure", {})
     mirror = concepts.get("orbital_mirror", {})
 
-    return {
+    variables = {
         "MISSION_IDENTITY": IDENTITY,
         "MISSION_CODENAME": CODENAME,
         "MISSION_VERSION": str(paper.get("version", "")),
@@ -118,6 +215,10 @@ def generate_variables(
         "STRUCT_ICE_STRENGTH_MPA": _num(structure.get("ice_strength_mpa", 1.5)),
         "ORBIT_SMA_KM": _num(mirror.get("semi_major_axis_km", 6878.0)),
         "ORBIT_INCLINATION_DEG": _num(mirror.get("inclination_deg", 45.0)),
+        "ORBIT_TARGET_LAT_DEG": _num(mirror.get("target_lat_deg", 60.0)),
+        "ORBIT_TARGET_LON_DEG": _num(mirror.get("target_lon_deg", 15.0)),
+        "ORBIT_DURATION_S": _num(mirror.get("duration_s", 1800.0)),
+        "ORBIT_DT_S": _num(mirror.get("dt_s", 30.0)),
         "MIRROR_AREA_M2": _num(mirror.get("mirror_area_m2", 1e4)),
         "MIRROR_REFLECTIVITY": _num(mirror.get("reflectivity", 0.90)),
         "MIRROR_BEAM_HALF_ANGLE_DEG": _num(mirror.get("beam_half_angle_deg", 0.02)),
@@ -125,6 +226,9 @@ def generate_variables(
         "PYTHON_VERSION": platform.python_version(),
         "GENERATION_TIMESTAMP": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    if include_measured:
+        variables.update(measured_variables(run_all_concepts(config)))
+    return variables
 
 
 def resolve_manuscript_tree(

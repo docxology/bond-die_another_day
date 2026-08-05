@@ -129,3 +129,33 @@ def test_plan_cold_water_rescue_warm_water_raises() -> None:
             distance_m=400.0,
             sweep_speed_m_s=2.0,
         )
+
+
+def test_fp_degenerate_ratio_guard_is_reachable() -> None:
+    """The `ratio >= 1.0` guard in `time_to_core_temp` is a live gate.
+
+    `water_c < target_c < initial_c` holds, yet the float division rounds to
+    exactly 1.0 for an extreme water temperature — without the second guard the
+    function would silently return a zero cooling time.
+    """
+    with pytest.raises(ValueError, match="strictly between"):
+        hyp.time_to_core_temp(1.0, 0.0, -1e16, 1e-3)
+
+
+def test_stage_boundaries_are_exact() -> None:
+    """Staging is closed on the lower bound of each band, so 35/32/28 map down."""
+    assert hyp.hypothermia_stage(hyp.MILD_THRESHOLD_C) == "normal"
+    assert hyp.hypothermia_stage(hyp.MILD_THRESHOLD_C - 1e-9) == "mild"
+    assert hyp.hypothermia_stage(hyp.MODERATE_THRESHOLD_C) == "mild"
+    assert hyp.hypothermia_stage(hyp.MODERATE_THRESHOLD_C - 1e-9) == "moderate"
+    assert hyp.hypothermia_stage(hyp.SEVERE_THRESHOLD_C) == "moderate"
+    assert hyp.hypothermia_stage(hyp.SEVERE_THRESHOLD_C - 1e-9) == "severe"
+
+
+def test_cooling_rate_scales_inversely_with_mass() -> None:
+    """Heat capacity grows with mass, so a heavier operative cools more slowly."""
+    light = hyp.cooling_rate_water(50.0, 1.0)
+    reference = hyp.cooling_rate_water(hyp.REF_MASS_KG, 1.0)
+    heavy = hyp.cooling_rate_water(120.0, 1.0)
+    assert light > reference > heavy
+    assert reference == pytest.approx(hyp.K_REF_PER_S)

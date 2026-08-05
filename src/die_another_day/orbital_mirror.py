@@ -31,6 +31,7 @@ from typing import cast
 import numpy as np
 
 __all__ = [
+    "DEGENERATE_BISECTOR_TOL",
     "MirrorPointing",
     "PassPlan",
     "PassPoint",
@@ -51,6 +52,9 @@ SOLAR_CONSTANT_W_M2 = 1361.0
 MU_EARTH = 3.986004418e14
 #: Mean Earth radius (m).
 earth_radius_m = 6.371e6
+#: Below this bisector norm the reflection geometry is degenerate (Sun and
+#: target directions are anti-parallel to within ~0.001 rad).
+DEGENERATE_BISECTOR_TOL = 1e-9
 
 
 @dataclass(frozen=True)
@@ -198,21 +202,46 @@ def point_mirror(
     """Compute the optimal mirror pointing and delivered energy at one instant.
 
     The mirror normal bisects the incoming solar ray and the ground re-point
-    (reflection law), so ``normal = unit(sun_unit - sat_dir? ) + unit(target -
-    sat)``; the incidence angle then drives how much projected mirror area
-    intercepts the sunlight.
+    (reflection law): ``n = unit(s_hat + r_hat)`` where ``s_hat`` is the unit
+    vector from the mirror **towards the Sun** and ``r_hat`` the unit vector
+    from the mirror towards the target. Because the Sun is ~1.5e11 m away and
+    the orbit radius is ~7e6 m, the mirror-to-Sun direction is the solar unit
+    vector itself (parallel-ray approximation); the satellite position does not
+    shift it measurably.
+
+    The incidence angle ``arccos(n . s_hat)`` is half the Sun-mirror-target
+    angle and drives how much projected mirror area intercepts the sunlight.
+    When the target lies almost exactly anti-parallel to the Sun direction the
+    bisector degenerates (no orientation can fold a ~180 deg turn), and the
+    instant is reported infeasible with zero delivered power rather than
+    raising.
     """
     sat = np.asarray(sat_eci, dtype=float)
     target = np.asarray(target_eci, dtype=float)
-    s_hat = _unit(np.asarray(sun_unit, dtype=float) - sat)  # mirror -> Sun
+    sun = _unit(np.asarray(sun_unit, dtype=float))
+    s_hat = sun  # mirror -> Sun (parallel-ray approximation)
     r_hat = _unit(target - sat)  # mirror -> target
-    normal = _unit(s_hat + r_hat)
-    cos_inc = float(np.clip(np.abs(np.dot(normal, s_hat)), 0.0, 1.0))
-    incidence_deg = float(np.rad2deg(np.arccos(cos_inc)))
 
     dist = float(np.linalg.norm(target - sat))
     elev = elevation_deg(sat, target)
-    sunlit = not in_shadow(sat, np.asarray(sun_unit, dtype=float))
+    sunlit = not in_shadow(sat, sun)
+
+    bisector = s_hat + r_hat
+    if float(np.linalg.norm(bisector)) < DEGENERATE_BISECTOR_TOL:
+        return MirrorPointing(
+            feasible=False,
+            sunlit=sunlit,
+            elevation_deg=elev,
+            distance_m=dist,
+            incidence_deg=90.0,
+            normal=(0.0, 0.0, 0.0),
+            delivered_power_w=0.0,
+            spot_radius_m=0.0,
+            target_flux_w_m2=0.0,
+        )
+    normal = _unit(bisector)
+    cos_inc = float(np.clip(np.abs(np.dot(normal, s_hat)), 0.0, 1.0))
+    incidence_deg = float(np.rad2deg(np.arccos(cos_inc)))
 
     # Focused beam: reflected power, then flux over the beam's footprint.
     # The beam half-angle adds the mirror's own apparent angular radius.

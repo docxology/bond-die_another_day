@@ -22,6 +22,7 @@ DEFAULT_GOAL = "survey available assets and constraints"
 
 
 def main() -> int:
+    """Load the provider by slug and print the recon findings for a goal."""
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)

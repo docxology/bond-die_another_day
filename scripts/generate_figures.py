@@ -32,6 +32,7 @@ from die_another_day.manuscript_variables import load_manuscript_config  # noqa:
 
 
 def main() -> int:
+    """Render the four ICARUS concept figures into ``output/figures/``."""
     config = load_manuscript_config()
     concepts = config["concepts"]
     out_dir = ROOT / "output" / "figures"

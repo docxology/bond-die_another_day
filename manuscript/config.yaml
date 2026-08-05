@@ -6,7 +6,7 @@
 paper:
   # RASP Standard: Title must be descriptive and objective
   title: "Die Another Day: ICARUS — Special-Agent Mission Software"
-  subtitle: "Biometric Identity-Replacement Detection, Ice-Palace Thermal Operations, and Orbital-Mirror Targeting"
+  subtitle: "Six deterministic mission models: biometric and DNA identity-replacement screening, ice-palace thermal, immersion, and structural operations, and orbital-mirror targeting"
   version: "0.1.0"
   date: "2026-08-04"
 
@@ -26,7 +26,12 @@ publication:
 keywords:
   - "identity-replacement detection"
   - "gene-therapy trait drift"
-  - "thermal operations planning"
+  - "Mahalanobis distance screening"
+  - "DNA sequence identity verification"
+  - "k-mer fingerprint similarity"
+  - "cold-environment operations planning"
+  - "cold-water immersion hypothermia"
+  - "ice bearing capacity and thermal stress"
   - "orbital mirror targeting"
   - "special-agent mission software"
   - "reproducible research"

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from die_another_day import ice_ops
@@ -80,20 +82,39 @@ def test_plan_rotation_validation() -> None:
         ice_ops.plan_rotation(2, 100, 0)
 
 
-def test_thermal_load_positive_under_cold() -> None:
-    # A long exposure (well past the comfort-crossing point) yields cold stress.
-    load = ice_ops.thermal_load(BODY, ENV, K, 3600.0)
-    assert load > 0.0
+def _analytic_cold_strain(body: float, env: float, k: float, exposure_s: float) -> float:
+    """Closed form of the normothermia-referenced cold-strain integral.
+
+    ``int_0^E (T0 - T(t)) dt`` with ``T(t) = Te + (T0-Te)e^{-kt}`` equals
+    ``(T0-Te)[E - (1-e^{-kE})/k]`` — an independent oracle for the quadrature.
+    """
+    return (body - env) * (exposure_s - (1.0 - math.exp(-k * exposure_s)) / k)
 
 
-def test_thermal_load_zero_for_short_exposure() -> None:
-    # A very short exposure where body stays above comfort => no cold stress.
-    load = ice_ops.thermal_load(BODY, ENV, K, 0.001)
-    assert load >= 0.0
+def test_thermal_load_matches_closed_form() -> None:
+    # The quadrature must reproduce the analytic integral, not merely be >= 0.
+    for exposure in (60.0, 450.0, 3600.0):
+        measured = ice_ops.thermal_load(BODY, ENV, K, exposure)
+        assert measured == pytest.approx(_analytic_cold_strain(BODY, ENV, K, exposure), rel=1e-4)
+
+
+def test_thermal_load_is_strictly_positive_for_the_operational_shift() -> None:
+    # Regression guard: a comfort-referenced (20 C) integral is exactly zero for
+    # every survivable shift, so the metric must be normothermia-referenced.
+    shift_s = 450.0
+    assert ice_ops.thermal_load(BODY, ENV, K, shift_s) > 0.0
+    assert ice_ops.thermal_load(BODY, ENV, K, shift_s, ice_ops.DEFAULT_COMFORT_C) == 0.0
+
+
+def test_thermal_load_monotonic_in_exposure() -> None:
+    short = ice_ops.thermal_load(BODY, ENV, K, 100.0)
+    long = ice_ops.thermal_load(BODY, ENV, K, 400.0)
+    assert long > short > 0.0
 
 
 def test_thermal_load_nonpositive_exposure_zero() -> None:
     assert ice_ops.thermal_load(BODY, ENV, K, 0.0) == 0.0
+    assert ice_ops.thermal_load(BODY, ENV, K, -5.0) == 0.0
 
 
 def test_heating_energy_cold_env() -> None:
@@ -124,6 +145,23 @@ def test_plan_briefing_end_to_end() -> None:
     )
     assert plan.safe_exposure_s == pytest.approx(467.1, rel=0.01)
     assert plan.rotation.feasible is True
-    assert plan.thermal_load_deg_s >= 0.0
-    assert plan.heating_energy_j > 0.0
+    # Cold strain is referenced to normothermia, so a real shift must register.
+    assert plan.reference_temp_c == BODY
+    assert plan.thermal_load_deg_s == pytest.approx(
+        _analytic_cold_strain(BODY, ENV, K, plan.rotation.shift_duration_s), rel=1e-4
+    )
+    assert plan.thermal_load_deg_s > 0.0
+    assert plan.heating_energy_j == pytest.approx(1500.0 * (ice_ops.DEFAULT_COMFORT_C - ENV) * 1800.0)
     assert plan.env_temp_c == ENV
+    assert plan.comfort_temp_c == ice_ops.DEFAULT_COMFORT_C
+
+
+def test_fp_degenerate_ratio_guard_is_reachable() -> None:
+    """The `ratio >= 1.0` guard is a live gate, not unreachable defensive code.
+
+    With an extreme ambient the float division `(crit-env)/(body-env)` rounds
+    to exactly 1.0 even though `env < crit < body` holds, so the second guard
+    is what stops a `log(1) = 0` exposure ceiling from being returned.
+    """
+    with pytest.raises(ValueError, match="strictly between"):
+        ice_ops.seconds_to_critical(1.0, 0.0, -1e16, 1e-3)

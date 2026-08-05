@@ -167,3 +167,89 @@ def test_plan_pass_validation() -> None:
             duration_s=300.0,
             dt_s=0.0,
         )
+
+
+def test_mirror_to_sun_direction_is_the_solar_vector_not_nadir() -> None:
+    """Regression: the incoming ray must be the solar direction.
+
+    An earlier implementation formed the mirror-to-Sun vector as
+    ``unit(sun_unit - sat)``. Because ``sun_unit`` is a *unit* vector while
+    ``sat`` is ~7.2e6 m, that expression collapses to ``-unit(sat)`` — the
+    nadir direction — which here sits ~57 deg away from the true Sun. This test
+    pins the incidence angle to the half-angle between the true solar direction
+    and the target direction, which only holds for the correct ray.
+    """
+    gmst = om.gmst_radians(JD)
+    target = om.ecef_to_eci(om.lwlatlon_to_ecef(LAT, LON), gmst)
+    sat = om.propagate_circular(
+        semi_major_axis_m=SMA, inclination_deg=65.0, raan_deg=RAAN, mean_anomaly_deg=MA, elapsed_s=1680.0
+    )
+    sun = om.sun_unit_eci(JD)
+    pt = om.point_mirror(sat, target, sun)
+
+    r_hat = (target - sat) / np.linalg.norm(target - sat)
+    half_angle_deg = np.rad2deg(np.arccos(np.clip(np.dot(sun, r_hat), -1.0, 1.0))) / 2.0
+    assert pt.incidence_deg == pytest.approx(half_angle_deg, abs=1e-6)
+
+    # The nadir-based ray would have produced a materially different angle.
+    nadir = -sat / np.linalg.norm(sat)
+    nadir_half_deg = np.rad2deg(np.arccos(np.clip(np.dot(nadir, r_hat), -1.0, 1.0))) / 2.0
+    assert abs(nadir_half_deg - half_angle_deg) > 1.0
+
+
+def test_mirror_normal_bisects_and_obeys_the_reflection_law() -> None:
+    """The normal must sit at equal angles to the incoming and outgoing rays."""
+    gmst = om.gmst_radians(JD)
+    target = om.ecef_to_eci(om.lwlatlon_to_ecef(LAT, LON), gmst)
+    sat = om.propagate_circular(
+        semi_major_axis_m=SMA, inclination_deg=65.0, raan_deg=RAAN, mean_anomaly_deg=MA, elapsed_s=1680.0
+    )
+    sun = om.sun_unit_eci(JD)
+    pt = om.point_mirror(sat, target, sun)
+    normal = np.array(pt.normal)
+    r_hat = (target - sat) / np.linalg.norm(target - sat)
+    assert float(np.dot(normal, sun)) == pytest.approx(float(np.dot(normal, r_hat)), abs=1e-9)
+
+
+def test_degenerate_bisector_is_infeasible_not_an_exception() -> None:
+    """Anti-parallel Sun and target directions cannot be folded by any mirror."""
+    sat = np.array([0.0, 0.0, 8.0e6])
+    sun = np.array([0.0, 0.0, 1.0])
+    target = sat - np.array([0.0, 0.0, 1.0e6])  # target lies exactly anti-solar
+    pt = om.point_mirror(sat, target, sun)
+    assert pt.feasible is False
+    assert pt.delivered_power_w == 0.0
+    assert pt.target_flux_w_m2 == 0.0
+    assert pt.normal == (0.0, 0.0, 0.0)
+
+
+def test_delivered_power_follows_cosine_of_incidence() -> None:
+    """Power is the solar constant times projected area, reflectivity, atmosphere."""
+    sat = np.array([0.0, 0.0, 8.0e6])
+    sun = np.array([0.0, 0.0, 1.0])
+    target = np.array([0.0, 0.0, 9.0e6])  # retro-reflection straight back at the Sun
+    pt = om.point_mirror(sat, target, sun, mirror_area_m2=1.0e4, reflectivity=0.9)
+    # Incoming and outgoing rays coincide, so the normal is the solar ray itself:
+    # incidence is 0 deg and the full mirror area is projected into the beam.
+    assert pt.incidence_deg == pytest.approx(0.0, abs=1e-9)
+    assert pt.delivered_power_w == pytest.approx(om.SOLAR_CONSTANT_W_M2 * 1.0e4 * 0.9 * 0.85)
+
+
+def test_plan_pass_with_no_feasible_window() -> None:
+    """A near-vertical elevation gate leaves the pass with no feasible instant."""
+    plan = om.plan_pass(
+        semi_major_axis_m=SMA,
+        inclination_deg=65.0,
+        raan_deg=RAAN,
+        mean_anomaly_deg=MA,
+        target_lat_deg=LAT,
+        target_lon_deg=LON,
+        jd_start=JD,
+        duration_s=600.0,
+        dt_s=60.0,
+        min_elevation_deg=89.9,
+    )
+    assert plan.n_feasible == 0
+    assert plan.feasible_seconds == 0.0
+    assert plan.best_index is None
+    assert plan.best_flux_w_m2 == 0.0

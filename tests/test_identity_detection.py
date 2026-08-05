@@ -125,11 +125,42 @@ def test_detect_drift_validation() -> None:
 
 
 def test_chi_square_statistic_consistent() -> None:
-    # A probe exactly at the alpha quantile should have p_value ~ alpha.
+    """A probe placed exactly on the alpha quantile must report p_value == alpha.
+
+    The probe is constructed by scaling an arbitrary direction so its squared
+    Mahalanobis distance equals the quantile exactly, which makes the
+    chi-square calibration falsifiable rather than merely asserted.
+    """
     profile = _profile()
     k = profile.marker_count
-    threshold = float(stats.chi2.ppf(1.0 - 0.05, k))
-    assert threshold > 0
+    alpha = 0.05
+    threshold = float(stats.chi2.ppf(1.0 - alpha, k))
+
+    direction = np.ones(k)
+    quadratic = float(direction @ (profile.precision @ direction))
+    probe = profile.mean + direction * np.sqrt(threshold / quadratic)
+
+    assert idm.mahalanobis_sq(profile, probe) == pytest.approx(threshold, rel=1e-9)
+    verdict = idm.detect_drift(profile, probe, alpha=alpha, std_threshold=0.5, min_markers=1)
+    assert verdict.p_value == pytest.approx(alpha, rel=1e-9)
+    assert verdict.threshold == pytest.approx(threshold, rel=1e-12)
+
+    # A probe scaled just inside the quantile clears; just outside, it trips.
+    inside = profile.mean + 0.99 * (probe - profile.mean)
+    outside = profile.mean + 1.01 * (probe - profile.mean)
+    assert idm.detect_drift(profile, inside, alpha=alpha, std_threshold=0.5, min_markers=1).replaced is False
+    assert idm.detect_drift(profile, outside, alpha=alpha, std_threshold=0.5, min_markers=1).replaced is True
+
+
+def test_singular_covariance_falls_back_to_pseudo_inverse() -> None:
+    """With ridge disabled, an exactly singular covariance takes the pinv path."""
+    identical = np.array([[1.0, 1.0], [1.0, 1.0]])
+    profile = idm.estimate_profile(identical, ridge=0.0)
+    assert np.allclose(profile.covariance, 0.0)
+    # pinv of the zero matrix is the zero matrix; np.linalg.inv would not be.
+    assert np.allclose(profile.precision, 0.0)
+    # Zero-variance markers contribute no drift evidence.
+    assert np.allclose(idm.per_marker_z_scores(profile, np.array([5.0, 5.0])), 0.0)
 
 
 def test_generate_identity_samples_deterministic() -> None:

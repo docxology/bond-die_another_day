@@ -20,6 +20,7 @@ from bond_api.serialization import to_json  # noqa: E402
 
 
 def main() -> int:
+    """Execute the mission plan and print the outcome as round-trip JSON."""
     provider = load_provider("die_another_day", search_paths=[SRC])
     brief = provider.brief()
     plan = provider.plan(brief)

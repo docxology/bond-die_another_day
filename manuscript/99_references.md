@@ -25,3 +25,9 @@ the mission models:
    Astrodynamics*, AIAA, 1999 (orbital propagation).
 10. P. E. Glaser, "Power from the sun: its future," *Science*, 162(3856):857-861,
     1968 (orbital reflector / space solar power).
+11. B. D. Ondov, T. J. Treangen, P. Melsted, A. B. Mallonee, N. H. Bergman,
+    S. Koren & A. M. Phillippy, "Mash: fast genome and metagenome distance
+    estimation using MinHash," *Genome Biology*, 17:132, 2016
+    (k-mer set similarity / alignment-free genome comparison).
+12. D. A. Vallado, *Fundamentals of Astrodynamics and Applications*, 4th ed.,
+    Microcosm Press, 2013 (sidereal time, ECI/ECEF frames, shadow models).

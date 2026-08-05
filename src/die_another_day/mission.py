@@ -20,8 +20,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-
 from bond_api.protocol import (
     Asset,
     Constraint,
@@ -46,6 +44,8 @@ from die_another_day import (
     sequence_identity,
 )
 from die_another_day.manuscript_variables import load_manuscript_config
+from die_another_day.mission_results import MISSION_SEED as _MISSION_SEED
+from die_another_day.mission_results import run_all_concepts
 
 __all__ = ["MissionProvider"]
 
@@ -53,24 +53,6 @@ __all__ = ["MissionProvider"]
 _PACKAGE_VERSION = "0.1.0"
 _FILM = "die_another_day"
 _CODENAME = "ICARUS"
-
-#: Deterministic seed for all synthetic data this provider generates.
-_MISSION_SEED = 7
-
-
-def _replacement_probe(profile: identity_detection.BiometricProfile, seed: int, cfg: dict) -> np.ndarray:
-    """Deterministically synthesize a gene-therapy-grade replaced operative.
-
-    Shifts the first ``min_markers`` markers by ``1.5 * std_threshold``
-    standard deviations (a coherent, multi-marker drift) plus small noise.
-    """
-    rng = np.random.default_rng(seed)
-    std_threshold = float(cfg.get("std_threshold", 3.0))
-    shift = 1.5 * std_threshold
-    probe = profile.mean.copy()
-    n_shift = min(int(cfg.get("min_markers", 2)), profile.marker_count)
-    probe[:n_shift] = probe[:n_shift] + shift * profile.per_marker_std[:n_shift]
-    return probe + 0.1 * rng.standard_normal(profile.marker_count)
 
 
 class MissionProvider:  # noqa: N801 — class name is fixed by the discovery contract
@@ -149,110 +131,22 @@ class MissionProvider:  # noqa: N801 — class name is fixed by the discovery co
         )
 
     def execute(self, plan: MissionPlan) -> MissionOutcome:
-        """Run the plan against the deterministic domain core and report results."""
-        concepts = self._config.get("concepts", {})
-        id_cfg = concepts.get("identity", {})
-        seq_cfg = concepts.get("sequence_identity", {})
-        ice_cfg = concepts.get("ice_ops", {})
-        hyp_cfg = concepts.get("hypothermia", {})
-        struct_cfg = concepts.get("ice_structure", {})
-        orb_cfg = concepts.get("orbital_mirror", {})
+        """Run the plan against the deterministic domain core and report results.
 
-        # --- Concept 1: biometric identity-replacement detection -----------
-        marker_count = int(id_cfg.get("num_biomarkers", 6))
-        baseline = identity_detection.generate_identity_samples(
-            rng_seed=_MISSION_SEED,
-            n_samples=200,
-            marker_count=marker_count,
-        )
-        profile = identity_detection.estimate_profile(baseline)
-        replaced = identity_detection.detect_drift(
-            profile,
-            _replacement_probe(profile, _MISSION_SEED, id_cfg),
-            alpha=float(id_cfg.get("alpha", 1e-3)),
-            std_threshold=float(id_cfg.get("std_threshold", 3.0)),
-            min_markers=int(id_cfg.get("min_markers", 2)),
-        )
-        genuine = identity_detection.detect_drift(
-            profile,
-            profile.mean,
-            alpha=float(id_cfg.get("alpha", 1e-3)),
-            std_threshold=float(id_cfg.get("std_threshold", 3.0)),
-            min_markers=int(id_cfg.get("min_markers", 2)),
-        )
-
-        # --- Concept 2: DNA sequence identity verification -----------------
-        genome_length = int(seq_cfg.get("genome_length", 1500))
-        reference = sequence_identity.generate_genome(genome_length, seed=_MISSION_SEED)
-        scattered = int(seq_cfg.get("scattered_errors", 5))
-        cluster_len = int(seq_cfg.get("cluster_min", 12))
-        genuine_seq = sequence_identity.mutate_genome(reference, seed=_MISSION_SEED, n_substitutions=scattered)
-        replaced_seq = sequence_identity.mutate_genome(
-            reference,
-            seed=_MISSION_SEED,
-            n_substitutions=scattered,
-            cluster_length=cluster_len,
-        )
-        seq_genuine = sequence_identity.verify_identity(
-            reference,
-            genuine_seq,
-            k=int(seq_cfg.get("kmer_k", 9)),
-            match_jaccard=float(seq_cfg.get("match_jaccard", 0.90)),
-            cluster_min=cluster_len,
-        )
-        seq_replaced = sequence_identity.verify_identity(
-            reference,
-            replaced_seq,
-            k=int(seq_cfg.get("kmer_k", 9)),
-            match_jaccard=float(seq_cfg.get("match_jaccard", 0.90)),
-            cluster_min=cluster_len,
-        )
-
-        # --- Concept 3: ice-palace air operations ---------------------------
-        decay_rate = float(ice_cfg.get("decay_rate_h", 0.8)) / 3600.0
-        ice = ice_ops.plan_briefing(
-            env_temp_c=float(ice_cfg.get("env_temp_c", -34.0)),
-            body_temp_c=float(ice_cfg.get("body_temp_c", 37.0)),
-            critical_temp_c=float(ice_cfg.get("critical_temp_c", 30.0)),
-            decay_rate=decay_rate,
-            num_operatives=int(ice_cfg.get("num_operatives", 4)),
-            op_duration_s=float(ice_cfg.get("op_duration_s", 1800)),
-            thermal_conductance=float(ice_cfg.get("thermal_conductance", 1500.0)),
-        )
-
-        # --- Concept 4: cold-water hypothermia / rescue ---------------------
-        rescue = hypothermia.plan_cold_water_rescue(
-            water_c=float(hyp_cfg.get("water_temp_c", 10.0)),
-            mass_kg=float(hyp_cfg.get("body_mass_kg", 75.0)),
-            insulation_factor=float(hyp_cfg.get("insulation_factor", 0.9)),
-            distance_m=float(hyp_cfg.get("distance_m", 400.0)),
-            sweep_speed_m_s=float(hyp_cfg.get("sweep_speed_m_s", 2.0)),
-        )
-
-        # --- Concept 5: ice-palace structural integrity ---------------------
-        structure = ice_structure.ice_structure_plan(
-            thickness_cm=float(struct_cfg.get("thickness_cm", 30.0)),
-            load_tons=float(struct_cfg.get("load_tons", 3.0)),
-            delta_t_c=float(struct_cfg.get("delta_t_c", 15.0)),
-            ice_strength_mpa=float(struct_cfg.get("ice_strength_mpa", 1.5)),
-        )
-
-        # --- Concept 6: orbital-mirror targeting ----------------------------
-        pass_plan = orbital_mirror.plan_pass(
-            semi_major_axis_m=float(orb_cfg.get("semi_major_axis_km", 6878.0)) * 1000.0,
-            inclination_deg=float(orb_cfg.get("inclination_deg", 45.0)),
-            raan_deg=float(orb_cfg.get("raan_deg", 120.0)),
-            mean_anomaly_deg=float(orb_cfg.get("mean_anomaly_deg", 30.0)),
-            target_lat_deg=float(orb_cfg.get("target_lat_deg", 60.0)),
-            target_lon_deg=float(orb_cfg.get("target_lon_deg", 15.0)),
-            jd_start=float(orb_cfg.get("jd_start", 2461000.5)),
-            duration_s=float(orb_cfg.get("duration_s", 1800.0)),
-            dt_s=float(orb_cfg.get("dt_s", 30.0)),
-            mirror_area_m2=float(orb_cfg.get("mirror_area_m2", 1e4)),
-            reflectivity=float(orb_cfg.get("reflectivity", 0.90)),
-            beam_half_angle_deg=float(orb_cfg.get("beam_half_angle_deg", 0.02)),
-            min_elevation_deg=float(orb_cfg.get("min_elevation_deg", 10.0)),
-        )
+        All six concept models run through
+        :func:`die_another_day.mission_results.run_all_concepts`, the same
+        entry point the manuscript variables use, so the outcome reported here
+        and the numbers printed in the paper cannot diverge.
+        """
+        concept_results = run_all_concepts(self._config, seed=_MISSION_SEED)
+        replaced = concept_results.identity_replaced
+        genuine = concept_results.identity_genuine
+        seq_replaced = concept_results.sequence_replaced
+        seq_genuine = concept_results.sequence_genuine
+        ice = concept_results.ice
+        rescue = concept_results.rescue
+        structure = concept_results.structure
+        pass_plan = concept_results.mirror
 
         results: dict[str, Any] = {
             "steps_completed": len(plan.steps),
@@ -272,7 +166,7 @@ class MissionProvider:  # noqa: N801 — class name is fixed by the discovery co
                 "genuine_jaccard": seq_genuine.jaccard,
                 "replaced_jaccard": seq_replaced.jaccard,
                 "edit_distance": seq_replaced.edit_distance,
-                "longest_cluster": max((c[1] - c[0] for c in seq_replaced.clusters), default=0),
+                "longest_cluster": concept_results.longest_edit_block,
                 "genome_length": seq_replaced.genome_length,
                 "method": seq_replaced.method,
             },
