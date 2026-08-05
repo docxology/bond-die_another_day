@@ -10,6 +10,14 @@ from pathlib import Path
 
 import pytest
 
+from die_another_day import manuscript_variables as mv
+from die_another_day.figures import (
+    render_identity_drift,
+    render_pass_profile,
+    render_sequence_mismatches,
+)
+from die_another_day.mission_results import run_all_concepts
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -98,6 +106,43 @@ def test_generate_figures_writes_pngs() -> None:
     assert result.returncode == 0, result.stderr
     assert (ROOT / "output" / "figures" / "icarus_pass_profile.png").is_file()
     assert (ROOT / "output" / "figures" / "icarus_identity_drift.png").is_file()
+
+
+def test_published_figures_depict_the_reported_run(tmp_path: Path) -> None:
+    """The PNGs on disk must be renders of the runner's own arrays.
+
+    This is the gate that catches a figure script rebuilding its own probes.
+    The published identity-drift figure once plotted a *different* experiment
+    from the results table it illustrates (a genuine probe of ``profile.mean``,
+    all-zero and invisible) and no test noticed, because the figure tests
+    checked only that a file existed. Renders are byte-reproducible, so
+    comparing bytes against an independent render from
+    ``run_all_concepts`` is exact: change either the script's probes or the
+    runner's and this fails.
+    """
+    result = _run("scripts/generate_figures.py")
+    assert result.returncode == 0, result.stderr
+
+    config = mv.load_manuscript_config()
+    results = run_all_concepts(config)
+    expected_drift = render_identity_drift(
+        results.identity_genuine_z,
+        results.identity_replaced_z,
+        results.identity_replaced,
+        tmp_path / "drift.png",
+        std_threshold=float(config["concepts"]["identity"]["std_threshold"]),
+    )
+    expected_seq = render_sequence_mismatches(
+        results.sequence_reference,
+        results.sequence_replaced_read,
+        tmp_path / "seq.png",
+    )
+    expected_pass = render_pass_profile(results.mirror, tmp_path / "pass.png")
+
+    figures = ROOT / "output" / "figures"
+    assert (figures / "icarus_identity_drift.png").read_bytes() == expected_drift.read_bytes()
+    assert (figures / "icarus_sequence_mismatch.png").read_bytes() == expected_seq.read_bytes()
+    assert (figures / "icarus_pass_profile.png").read_bytes() == expected_pass.read_bytes()
 
 
 SCRIPTS = [

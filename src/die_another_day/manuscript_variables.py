@@ -37,6 +37,7 @@ from die_another_day.hypothermia import (
 from die_another_day.mission_results import ConceptResults, run_all_concepts
 
 __all__ = [
+    "CONFIG_INPUT_TOKENS",
     "generate_variables",
     "load_manuscript_config",
     "measured_variables",
@@ -58,10 +59,67 @@ CONCEPT_NAMES = (
 )
 
 
+#: The complete registry of configured inputs: ``(concepts section, config key,
+#: manuscript token, coded default)``.
+#:
+#: This tuple is the *only* place configured-input tokens are declared, and it
+#: is what makes §05's "every configured input" billing checkable rather than
+#: aspirational. ``test_every_configured_input_is_registered_and_cited`` asserts
+#: (a) the set of ``(section, key)`` pairs here is exactly the set present in
+#: ``manuscript/config.yaml``, and (b) every token here is cited in
+#: ``manuscript/05_experimental_setup.md``. Adding a config key without adding a
+#: row, or adding a row without citing it, fails that test.
+CONFIG_INPUT_TOKENS: tuple[tuple[str, str, str, Any], ...] = (
+    ("identity", "num_biomarkers", "NUM_BIOMARKERS", 6),
+    ("identity", "alpha", "IDENTITY_ALPHA", 0.001),
+    ("identity", "std_threshold", "IDENTITY_STD_THRESHOLD", 3.0),
+    ("identity", "min_markers", "IDENTITY_MIN_MARKERS", 2),
+    ("sequence_identity", "genome_length", "SEQ_GENOME_LENGTH", 1500),
+    ("sequence_identity", "kmer_k", "SEQ_KMER_K", 9),
+    ("sequence_identity", "match_jaccard", "SEQ_MATCH_JACCARD", 0.90),
+    ("sequence_identity", "cluster_min", "SEQ_CLUSTER_MIN", 12),
+    ("sequence_identity", "scattered_errors", "SEQ_SCATTERED_ERRORS", 5),
+    ("ice_ops", "env_temp_c", "ICE_ENV_TEMP_C", -34.0),
+    ("ice_ops", "critical_temp_c", "ICE_CRITICAL_TEMP_C", 30.0),
+    ("ice_ops", "body_temp_c", "ICE_BODY_TEMP_C", 37.0),
+    ("ice_ops", "decay_rate_h", "ICE_DECAY_RATE_H", 0.8),
+    ("ice_ops", "num_operatives", "ICE_NUM_OPERATIVES", 4),
+    ("ice_ops", "op_duration_s", "ICE_OP_DURATION_S", 1800),
+    ("ice_ops", "thermal_conductance", "ICE_THERMAL_CONDUCTANCE_W_K", 1500.0),
+    ("hypothermia", "water_temp_c", "HYP_WATER_TEMP_C", 10.0),
+    ("hypothermia", "body_mass_kg", "HYP_MASS_KG", 75.0),
+    ("hypothermia", "insulation_factor", "HYP_INSULATION", 0.9),
+    ("hypothermia", "distance_m", "HYP_DISTANCE_M", 400.0),
+    ("hypothermia", "sweep_speed_m_s", "HYP_SWEEP_SPEED_M_S", 2.0),
+    ("ice_structure", "thickness_cm", "STRUCT_THICKNESS_CM", 30.0),
+    ("ice_structure", "load_tons", "STRUCT_LOAD_TONS", 3.0),
+    ("ice_structure", "delta_t_c", "STRUCT_DELTA_T_C", 15.0),
+    ("ice_structure", "ice_strength_mpa", "STRUCT_ICE_STRENGTH_MPA", 1.5),
+    ("orbital_mirror", "semi_major_axis_km", "ORBIT_SMA_KM", 6878.0),
+    ("orbital_mirror", "inclination_deg", "ORBIT_INCLINATION_DEG", 45.0),
+    ("orbital_mirror", "raan_deg", "ORBIT_RAAN_DEG", 120.0),
+    ("orbital_mirror", "mean_anomaly_deg", "ORBIT_MEAN_ANOMALY_DEG", 30.0),
+    ("orbital_mirror", "jd_start", "ORBIT_JD_START", 2461000.5),
+    ("orbital_mirror", "target_lat_deg", "ORBIT_TARGET_LAT_DEG", 60.0),
+    ("orbital_mirror", "target_lon_deg", "ORBIT_TARGET_LON_DEG", 15.0),
+    ("orbital_mirror", "duration_s", "ORBIT_DURATION_S", 1800.0),
+    ("orbital_mirror", "dt_s", "ORBIT_DT_S", 30.0),
+    ("orbital_mirror", "mirror_area_m2", "MIRROR_AREA_M2", 1e4),
+    ("orbital_mirror", "reflectivity", "MIRROR_REFLECTIVITY", 0.90),
+    ("orbital_mirror", "beam_half_angle_deg", "MIRROR_BEAM_HALF_ANGLE_DEG", 0.02),
+    ("orbital_mirror", "atmosphere_transmission", "MIRROR_ATMOSPHERE_TRANSMISSION", 0.85),
+    ("orbital_mirror", "min_elevation_deg", "MIRROR_MIN_ELEVATION_DEG", 10.0),
+)
+
+
 def _num(value: Any) -> str:
-    """Format a configured number tersely (int-like as int, else %g)."""
+    """Format a configured number tersely (int-like as int, else 10 sig figs).
+
+    Ten significant figures rather than ``%g``'s six so that a Julian date
+    (``2461300.5``) renders in full instead of collapsing to ``2.4613e+06``.
+    """
     f = float(value)
-    return str(int(f)) if f.is_integer() else f"{f:g}"
+    return str(int(f)) if f.is_integer() else f"{f:.10g}"
 
 
 def _fixed(value: float, digits: int) -> str:
@@ -99,12 +157,17 @@ def measured_variables(results: ConceptResults) -> dict[str, str]:
         "ID_GENUINE_SCORE": _fixed(genuine.score, 2),
         "ID_GENUINE_P_VALUE": _fixed(genuine.p_value, 3),
         "ID_GENUINE_FLAGGED": str(genuine.n_flagged),
+        # Construction parameter of the positive control, not an outcome: the
+        # sigma magnitude of the coherent shift applied to its leading markers.
+        "ID_REPLACED_SHIFT_SIGMA": _num(results.identity_shift_sigma),
         # --- identity (sequence) --------------------------------------------
         "SEQ_METHOD": seq_replaced.method,
         "SEQ_GENUINE_JACCARD_MEASURED": _fixed(seq_genuine.jaccard, 4),
         "SEQ_GENUINE_HAMMING": str(seq_genuine.hamming),
+        "SEQ_GENUINE_EDIT_DISTANCE": str(seq_genuine.edit_distance),
         "SEQ_GENUINE_LONGEST_RUN": str(results.genuine_longest_run),
         "SEQ_REPLACED_JACCARD_MEASURED": _fixed(seq_replaced.jaccard, 4),
+        "SEQ_REPLACED_HAMMING": str(seq_replaced.hamming),
         "SEQ_REPLACED_EDIT_DISTANCE": str(seq_replaced.edit_distance),
         "SEQ_LONGEST_BLOCK": str(results.longest_edit_block),
         # --- ice-palace air operations --------------------------------------
@@ -174,12 +237,6 @@ def generate_variables(
     concepts = config.get("concepts", {})
     if require_outputs and not concepts:
         raise ValueError("manuscript config 'concepts' section is empty — nothing to report")
-    identity = concepts.get("identity", {})
-    sequence = concepts.get("sequence_identity", {})
-    ice = concepts.get("ice_ops", {})
-    hyp = concepts.get("hypothermia", {})
-    structure = concepts.get("ice_structure", {})
-    mirror = concepts.get("orbital_mirror", {})
 
     variables = {
         "MISSION_IDENTITY": IDENTITY,
@@ -190,42 +247,13 @@ def generate_variables(
         "NUM_CONCEPTS": str(len(CONCEPT_MODULES)),
         "CONCEPT_MODULES": ", ".join(CONCEPT_MODULES),
         "CONCEPT_NAMES": ", ".join(CONCEPT_NAMES),
-        "NUM_BIOMARKERS": _num(identity.get("num_biomarkers", 6)),
-        "IDENTITY_ALPHA": _num(identity.get("alpha", 0.001)),
-        "IDENTITY_STD_THRESHOLD": _num(identity.get("std_threshold", 3.0)),
-        "IDENTITY_MIN_MARKERS": _num(identity.get("min_markers", 2)),
-        "SEQ_GENOME_LENGTH": _num(sequence.get("genome_length", 1500)),
-        "SEQ_KMER_K": _num(sequence.get("kmer_k", 9)),
-        "SEQ_MATCH_JACCARD": _num(sequence.get("match_jaccard", 0.90)),
-        "SEQ_CLUSTER_MIN": _num(sequence.get("cluster_min", 12)),
-        "ICE_ENV_TEMP_C": _num(ice.get("env_temp_c", -34.0)),
-        "ICE_CRITICAL_TEMP_C": _num(ice.get("critical_temp_c", 30.0)),
-        "ICE_BODY_TEMP_C": _num(ice.get("body_temp_c", 37.0)),
-        "ICE_DECAY_RATE_H": _num(ice.get("decay_rate_h", 0.8)),
-        "ICE_NUM_OPERATIVES": _num(ice.get("num_operatives", 4)),
-        "ICE_OP_DURATION_S": _num(ice.get("op_duration_s", 1800)),
-        "HYP_WATER_TEMP_C": _num(hyp.get("water_temp_c", 10.0)),
-        "HYP_MASS_KG": _num(hyp.get("body_mass_kg", 75.0)),
-        "HYP_INSULATION": _num(hyp.get("insulation_factor", 0.9)),
-        "HYP_DISTANCE_M": _num(hyp.get("distance_m", 400.0)),
-        "HYP_SWEEP_SPEED_M_S": _num(hyp.get("sweep_speed_m_s", 2.0)),
-        "STRUCT_THICKNESS_CM": _num(structure.get("thickness_cm", 30.0)),
-        "STRUCT_LOAD_TONS": _num(structure.get("load_tons", 3.0)),
-        "STRUCT_DELTA_T_C": _num(structure.get("delta_t_c", 15.0)),
-        "STRUCT_ICE_STRENGTH_MPA": _num(structure.get("ice_strength_mpa", 1.5)),
-        "ORBIT_SMA_KM": _num(mirror.get("semi_major_axis_km", 6878.0)),
-        "ORBIT_INCLINATION_DEG": _num(mirror.get("inclination_deg", 45.0)),
-        "ORBIT_TARGET_LAT_DEG": _num(mirror.get("target_lat_deg", 60.0)),
-        "ORBIT_TARGET_LON_DEG": _num(mirror.get("target_lon_deg", 15.0)),
-        "ORBIT_DURATION_S": _num(mirror.get("duration_s", 1800.0)),
-        "ORBIT_DT_S": _num(mirror.get("dt_s", 30.0)),
-        "MIRROR_AREA_M2": _num(mirror.get("mirror_area_m2", 1e4)),
-        "MIRROR_REFLECTIVITY": _num(mirror.get("reflectivity", 0.90)),
-        "MIRROR_BEAM_HALF_ANGLE_DEG": _num(mirror.get("beam_half_angle_deg", 0.02)),
-        "MIRROR_MIN_ELEVATION_DEG": _num(mirror.get("min_elevation_deg", 10.0)),
         "PYTHON_VERSION": platform.python_version(),
         "GENERATION_TIMESTAMP": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    for section, key, token, default in CONFIG_INPUT_TOKENS:
+        block = concepts.get(section, {}) if isinstance(concepts, dict) else {}
+        block = block if isinstance(block, dict) else {}
+        variables[token] = _num(block.get(key, default))
     if include_measured:
         variables.update(measured_variables(run_all_concepts(config)))
     return variables

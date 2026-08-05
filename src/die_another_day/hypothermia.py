@@ -18,6 +18,12 @@ physiological timeline is measured in minutes:
   water can reach the operative before the core reaches the severe stage, and
   reports the margin.
 
+**Calibration caveat.** The reference decay rate :data:`K_REF_PER_S` is a
+film-scenario constant, not a physiological calibration; see its docstring. The
+minutes-scale timeline this module produces is a property of that constant, not
+a survival-time prediction. The clinical staging thresholds are the only part
+taken from the survival literature.
+
 All functions are pure and deterministic.
 """
 
@@ -45,8 +51,18 @@ __all__ = [
 #: Reference adult mass (kg) for the cooling-rate scaling.
 REF_MASS_KG = 75.0
 
-#: Calibrated cooling rate (1/s): a 75 kg adult in 10 C water reaches a 30 C
-#: core in ~20 minutes, matching the cold-water survival literature.
+#: Reference cooling rate (1/s) for the mission scenario. It is *defined* by
+#: this identity, which ``test_hypothermia.py`` asserts: a 75 kg adult in 10 C
+#: water reaches a 30 C core in exactly 20 minutes.
+#:
+#: This is a scenario constant, NOT a physiological calibration. It implies an
+#: initial cooling rate near 24 C/hour, roughly an order of magnitude faster
+#: than measured immersion cooling in 10 C water; the cold-water survival
+#: literature (Tipton 1989; Golden & Tipton 2002) reports core cooling of a few
+#: degrees per hour at these temperatures. Only the clinical staging bands
+#: below are taken from that literature. Times produced by this module are
+#: internally consistent with this constant and are not survival predictions —
+#: see manuscript §07 Limitations.
 K_REF_PER_S = 2.5e-4
 
 #: Cold-shock window (s): the first three minutes carry gasp/aspiration risk.

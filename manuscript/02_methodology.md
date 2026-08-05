@@ -79,6 +79,14 @@ before the core reaches the severe stage, reporting the margin and the core
 temperature at reach (immersion in {{HYP_WATER_TEMP_C}} C water, {{HYP_MASS_KG}}
 kg operative, insulation factor {{HYP_INSULATION}}).
 
+The reference decay rate `K_REF_PER_S` is a *scenario* constant, not a
+physiological calibration. It is fixed so that a {{HYP_MASS_KG}} kg operative in
+{{HYP_WATER_TEMP_C}} C water reaches a 30 C core in 20 minutes — an initial
+cooling rate near 24 C/hour, which is roughly an order of magnitude faster than
+measured immersion cooling in water at this temperature. Every hypothermia
+number in §03 is therefore internally consistent with that constant and should
+not be read as a survival-time prediction; see §07.
+
 ## Ice-structure integrity (`ice_structure.py`)
 
 The ice palace must carry its load and survive thermal gradients. Load capacity
@@ -116,10 +124,13 @@ reported infeasible with zero delivered power rather than raising. Targeting is
 otherwise feasible when the mirror is sunlit (outside Earth's cylindrical
 shadow) and above the {{MIRROR_MIN_ELEVATION_DEG}}-degree horizon. Delivered
 power is the solar constant times mirror area ({{MIRROR_AREA_M2}} m^2) times
-reflectivity ({{MIRROR_REFLECTIVITY}}) times the cosine of incidence; flux at
-the target follows from the beam spread, whose half-angle is the configured
-{{MIRROR_BEAM_HALF_ANGLE_DEG}} deg plus the mirror's own apparent angular
-radius at range.
+reflectivity ({{MIRROR_REFLECTIVITY}}) times the cosine of incidence times a
+lumped one-way transmission factor ({{MIRROR_ATMOSPHERE_TRANSMISSION}}) that
+stands in for atmospheric attenuation, figure error, and scattering — it is a
+configured constant, not a modelled quantity, and it scales every reported
+flux. Flux at the target follows from the beam spread, whose half-angle is the
+configured {{MIRROR_BEAM_HALF_ANGLE_DEG}} deg plus the mirror's own apparent
+angular radius at range.
 
 ## Execution and control structure
 

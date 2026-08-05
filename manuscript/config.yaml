@@ -56,20 +56,26 @@ testing:
   max_project_test_failures: 0
 
 # Mission concept parameters — read by `src/die_another_day/` and `scripts/`.
+#
+# Every key below is consumed by `mission_results.run_all_concepts` AND surfaced
+# as a manuscript token registered in `manuscript_variables.CONFIG_INPUT_TOKENS`;
+# `test_every_configured_input_is_registered_and_cited` fails if either link is
+# missing. Per-concept `seed:` keys used to live here and were read by nothing
+# (or, worse, only by the figure script, which let the figures drift away from
+# the reported run); the deterministic seed is the code constant
+# `mission_results.MISSION_SEED`, reported as `{{MISSION_SEED}}`.
 concepts:
   identity:
     num_biomarkers: 6
     alpha: 0.001
     std_threshold: 3.0
     min_markers: 2
-    seed: 7
   sequence_identity:
     genome_length: 1500
     kmer_k: 9
     match_jaccard: 0.90
     cluster_min: 12
     scattered_errors: 5
-    seed: 7
   ice_ops:
     env_temp_c: -34.0
     critical_temp_c: 30.0
@@ -84,13 +90,11 @@ concepts:
     insulation_factor: 0.9
     distance_m: 400.0
     sweep_speed_m_s: 2.0
-    seed: 7
   ice_structure:
     thickness_cm: 30.0
     load_tons: 3.0
     delta_t_c: 15.0
     ice_strength_mpa: 1.5
-    seed: 7
   orbital_mirror:
     # A circular LEO orbit inclined 65 deg so it reaches the 60N target.
     semi_major_axis_km: 7200.0
@@ -105,5 +109,7 @@ concepts:
     mirror_area_m2: 10000.0
     reflectivity: 0.90
     beam_half_angle_deg: 0.02
+    # Lumped one-way transmission factor applied to the delivered beam power
+    # (atmosphere, figure error, and scattering rolled into one constant).
+    atmosphere_transmission: 0.85
     min_elevation_deg: 10.0
-    seed: 7

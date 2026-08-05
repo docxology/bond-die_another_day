@@ -18,7 +18,15 @@ control:
   population (seed ``seed + 1``) — not the profile mean, which would score
   exactly zero and make the negative control unfalsifiable;
 * the **replaced** genome carries a contiguous edit block, and the **genuine**
-  genome carries only scattered single-base sequencing noise.
+  genome carries only scattered single-base sequencing noise. The two reads
+  draw their scattered errors from *independent* position sets (the block
+  consumes RNG draws before the scattered positions, and it also removes its
+  own loci from the available pool), so the probes are matched on the *number*
+  of scattered errors, not on their positions.
+
+:class:`ConceptResults` also carries the exact probe arrays and reads that were
+scored, so ``scripts/generate_figures.py`` can plot the very experiment the
+results table reports instead of rebuilding its own probes.
 
 Every function is pure and deterministic: the same config and seed reproduce
 identical results.
@@ -41,8 +49,10 @@ from die_another_day import (
 )
 
 __all__ = [
+    "BASELINE_SAMPLES",
     "ConceptResults",
     "MISSION_SEED",
+    "REPLACEMENT_SHIFT_FACTOR",
     "genuine_probe",
     "replacement_probe",
     "run_all_concepts",
@@ -53,6 +63,13 @@ MISSION_SEED = 7
 
 #: Enrolled baseline population size for the biometric profile.
 BASELINE_SAMPLES = 200
+
+#: Multiple of the per-marker flagging threshold used to build the positive
+#: control. The replaced probe is shifted by ``REPLACEMENT_SHIFT_FACTOR *
+#: std_threshold`` sigma so it lands clearly *past* the flagging bar rather
+#: than exactly on it — the manuscript cites the product, never the threshold
+#: alone, via the ``ID_REPLACED_SHIFT_SIGMA`` token.
+REPLACEMENT_SHIFT_FACTOR = 1.5
 
 
 @dataclass(frozen=True)
@@ -68,6 +85,18 @@ class ConceptResults:
     structure: ice_structure.IceStructurePlan
     mirror: orbital_mirror.PassPlan
     seed: int
+    #: Per-marker standardized drift of the two biometric probes that were
+    #: actually scored above. Carried so the published figure plots the same
+    #: experiment the results table reports.
+    identity_genuine_z: tuple[float, ...]
+    identity_replaced_z: tuple[float, ...]
+    #: Magnitude (in sigma) of the coherent shift applied to the positive
+    #: control's leading markers — ``REPLACEMENT_SHIFT_FACTOR * std_threshold``.
+    identity_shift_sigma: float
+    #: The exact reads that were scored, for the same reason.
+    sequence_reference: str
+    sequence_genuine_read: str
+    sequence_replaced_read: str
 
     @property
     def longest_edit_block(self) -> int:
@@ -105,14 +134,18 @@ def replacement_probe(
 ) -> np.ndarray:
     """Synthesize a gene-therapy-grade replaced operative (positive control).
 
-    Shifts the first ``min_markers`` markers by ``1.5 * std_threshold``
-    standard deviations — a coherent, multi-marker drift — plus small noise so
-    the probe is not an exact algebraic construction.
+    Shifts the first ``min_markers`` markers by
+    ``REPLACEMENT_SHIFT_FACTOR * std_threshold`` standard deviations — a
+    coherent, multi-marker drift — plus small noise so the probe is not an
+    exact algebraic construction. The remaining markers are left at the
+    population mean, so the probe is a *coherent partial* replacement rather
+    than a uniform offset of every marker.
     """
     rng = np.random.default_rng(seed)
     probe = profile.mean.copy()
     n_shift = min(min_markers, profile.marker_count)
-    probe[:n_shift] = probe[:n_shift] + 1.5 * std_threshold * profile.per_marker_std[:n_shift]
+    shift = REPLACEMENT_SHIFT_FACTOR * std_threshold
+    probe[:n_shift] = probe[:n_shift] + shift * profile.per_marker_std[:n_shift]
     return probe + 0.1 * rng.standard_normal(profile.marker_count)
 
 
@@ -156,20 +189,24 @@ def run_all_concepts(config: Mapping[str, Any], *, seed: int = MISSION_SEED) -> 
         marker_count=marker_count,
     )
     profile = identity_detection.estimate_profile(baseline)
+    replaced_vector = replacement_probe(profile, seed=seed, std_threshold=std_threshold, min_markers=min_markers)
+    genuine_vector = genuine_probe(profile, seed=seed)
     identity_replaced = identity_detection.detect_drift(
         profile,
-        replacement_probe(profile, seed=seed, std_threshold=std_threshold, min_markers=min_markers),
+        replaced_vector,
         alpha=alpha,
         std_threshold=std_threshold,
         min_markers=min_markers,
     )
     identity_genuine = identity_detection.detect_drift(
         profile,
-        genuine_probe(profile, seed=seed),
+        genuine_vector,
         alpha=alpha,
         std_threshold=std_threshold,
         min_markers=min_markers,
     )
+    replaced_z = tuple(float(v) for v in identity_detection.per_marker_z_scores(profile, replaced_vector))
+    genuine_z = tuple(float(v) for v in identity_detection.per_marker_z_scores(profile, genuine_vector))
 
     # --- Concept 2: DNA sequence identity verification ---------------------
     genome_length = int(seq_cfg.get("genome_length", 1500))
@@ -234,6 +271,7 @@ def run_all_concepts(config: Mapping[str, Any], *, seed: int = MISSION_SEED) -> 
         mirror_area_m2=float(orb_cfg.get("mirror_area_m2", 1e4)),
         reflectivity=float(orb_cfg.get("reflectivity", 0.90)),
         beam_half_angle_deg=float(orb_cfg.get("beam_half_angle_deg", 0.02)),
+        atmosphere_rl=float(orb_cfg.get("atmosphere_transmission", 0.85)),
         min_elevation_deg=float(orb_cfg.get("min_elevation_deg", 10.0)),
     )
 
@@ -247,4 +285,10 @@ def run_all_concepts(config: Mapping[str, Any], *, seed: int = MISSION_SEED) -> 
         structure=structure,
         mirror=mirror,
         seed=seed,
+        identity_genuine_z=genuine_z,
+        identity_replaced_z=replaced_z,
+        identity_shift_sigma=REPLACEMENT_SHIFT_FACTOR * std_threshold,
+        sequence_reference=reference,
+        sequence_genuine_read=genuine_seq,
+        sequence_replaced_read=replaced_seq,
     )

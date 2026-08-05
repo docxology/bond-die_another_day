@@ -159,3 +159,29 @@ def test_cooling_rate_scales_inversely_with_mass() -> None:
     heavy = hyp.cooling_rate_water(120.0, 1.0)
     assert light > reference > heavy
     assert reference == pytest.approx(hyp.K_REF_PER_S)
+
+
+def test_reference_rate_matches_its_documented_definition() -> None:
+    """``K_REF_PER_S`` is defined by a 20-minute identity; pin it to that.
+
+    The constant's docstring states exactly one calibration: a 75 kg adult in
+    10 C water reaches a 30 C core in 20 minutes. That sentence is now a test.
+    Changing the constant without changing the sentence (or vice versa) fails.
+    """
+    k = hyp.cooling_rate_water(hyp.REF_MASS_KG, 1.0)
+    assert hyp.time_to_core_temp(37.0, 30.0, 10.0, k) == pytest.approx(1200.0, abs=1.0)
+
+
+def test_reference_rate_is_far_faster_than_measured_immersion_cooling() -> None:
+    """The scenario constant is an order of magnitude off the literature.
+
+    This is asserted, not hidden: manuscript §07 states the model is not
+    physiologically calibrated, and this test is what keeps that statement
+    true. Measured core cooling in ~10 C water is a few degrees per hour; if
+    someone ever recalibrates ``K_REF_PER_S`` down to that range, this test
+    goes red and the §07 limitation must be rewritten rather than left stale.
+    """
+    k = hyp.cooling_rate_water(hyp.REF_MASS_KG, 1.0)
+    initial_rate_c_per_hour = k * (37.0 - 10.0) * 3600.0
+    assert initial_rate_c_per_hour == pytest.approx(24.3, abs=0.1)
+    assert initial_rate_c_per_hour > 10.0

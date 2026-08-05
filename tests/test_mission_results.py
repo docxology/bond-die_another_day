@@ -84,6 +84,72 @@ def test_sequence_controls_separate(results: mr.ConceptResults) -> None:
     assert results.longest_edit_block >= 12
 
 
+def test_the_two_reads_are_matched_on_count_not_on_position(results: mr.ConceptResults) -> None:
+    """Pin what the sequence controls actually share, and what they do not.
+
+    §03 used to claim the replaced read carried "the same scattered errors" as
+    the genuine one. It does not: the edit block consumes RNG draws first and
+    removes its own loci from the available pool, so the two scattered sets are
+    independent. What *is* matched is their size, and that is the property the
+    manuscript now states.
+    """
+    config = mv.load_manuscript_config()["concepts"]["sequence_identity"]
+    scattered = int(config["scattered_errors"])
+    cluster_min = int(config["cluster_min"])
+    reference = results.sequence_reference
+
+    def positions(read: str) -> set[int]:
+        return {i for i, (a, b) in enumerate(zip(reference, read, strict=True)) if a != b}
+
+    genuine_positions = positions(results.sequence_genuine_read)
+    replaced_positions = positions(results.sequence_replaced_read)
+    block = next(c for c in results.sequence_replaced.clusters if c[1] - c[0] >= cluster_min)
+    replaced_scattered = replaced_positions - set(range(block[0], block[1]))
+
+    assert len(genuine_positions) == scattered
+    assert len(replaced_scattered) == scattered
+    assert genuine_positions != replaced_scattered
+    assert results.sequence_replaced.hamming == scattered + (block[1] - block[0])
+
+
+def test_generator_places_exactly_the_configured_number_of_scattered_errors(
+    results: mr.ConceptResults,
+) -> None:
+    """``SEQ_GENUINE_HAMMING`` is a generator check, not an independent finding.
+
+    ``mutate_genome`` must substitute at ``scattered_errors`` *distinct* loci
+    and must actually change the base at each — a collision or a no-op
+    substitution would break this equality. §05 names this token as
+    structurally determined for exactly this reason.
+    """
+    scattered = int(mv.load_manuscript_config()["concepts"]["sequence_identity"]["scattered_errors"])
+    assert results.sequence_genuine.hamming == scattered
+    assert results.genuine_longest_run == 1
+
+
+def test_replacement_shift_is_clear_of_the_flagging_threshold() -> None:
+    """The positive control's shift magnitude is a multiple of the threshold."""
+    baseline = idm.generate_identity_samples(rng_seed=mr.MISSION_SEED, n_samples=200, marker_count=6)
+    profile = idm.estimate_profile(baseline)
+    probe = mr.replacement_probe(profile, seed=mr.MISSION_SEED, std_threshold=3.0, min_markers=2)
+    z = idm.per_marker_z_scores(profile, probe)
+    expected = mr.REPLACEMENT_SHIFT_FACTOR * 3.0
+    assert np.allclose(z[:2], expected, atol=0.2)
+    assert expected != 3.0
+
+
+def test_carried_probe_arrays_are_the_ones_that_were_scored(results: mr.ConceptResults) -> None:
+    """The z-vectors on the record must reproduce the reported flag counts.
+
+    They are what the published figure plots, so if they were stale the figure
+    would illustrate a different experiment than the table.
+    """
+    threshold = float(mv.load_manuscript_config()["concepts"]["identity"]["std_threshold"])
+    assert sum(1 for v in results.identity_replaced_z if abs(v) > threshold) == results.identity_replaced.n_flagged
+    assert sum(1 for v in results.identity_genuine_z if abs(v) > threshold) == results.identity_genuine.n_flagged
+    assert all(abs(v) > 0.0 for v in results.identity_genuine_z)
+
+
 def test_run_is_deterministic(config: dict[str, Any]) -> None:
     first = mr.run_all_concepts(config)
     second = mr.run_all_concepts(config)

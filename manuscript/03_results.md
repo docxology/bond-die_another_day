@@ -10,9 +10,13 @@ token, so the paper and the code cannot disagree.
 ## Identity-replacement detection (biometric)
 
 Two probes are scored against the enrolled Gaussian baseline: a positive
-control (a coherent shift of {{IDENTITY_STD_THRESHOLD}}-standard-deviation
-magnitude on the first {{IDENTITY_MIN_MARKERS}} markers) and a negative control
-(a fresh out-of-sample operative drawn from the same enrolled population).
+control (a coherent {{ID_REPLACED_SHIFT_SIGMA}}-sigma shift on the first
+{{IDENTITY_MIN_MARKERS}} markers, the remaining markers left at the population
+mean, plus small noise) and a negative control (a fresh out-of-sample operative
+drawn from the same enrolled population). The shift magnitude is
+{{ID_REPLACED_SHIFT_SIGMA}} sigma, deliberately clear of — and not equal to —
+the {{IDENTITY_STD_THRESHOLD}}-sigma per-marker flagging threshold it must
+cross.
 
 | Probe | Mahalanobis $D^2$ | $\chi^2$ threshold | markers flagged | verdict |
 | --- | --- | --- | --- | --- |
@@ -28,21 +32,34 @@ genuine draw scores {{ID_GENUINE_SCORE}} ($p =$ {{ID_GENUINE_P_VALUE}}) with
 deliberately not the profile mean, which would score exactly zero and make
 clearance true by construction rather than measured.
 
-![Per-marker standardized trait drift for the genuine and replaced probes. The
-dashed lines mark the $\pm${{IDENTITY_STD_THRESHOLD}} flagging
+![Per-marker standardized trait drift for the two probes that produced the
+verdicts in the table above — the out-of-sample genuine draw and the
+{{ID_REPLACED_SHIFT_SIGMA}}-sigma replaced probe — plotted from the same
+`ConceptResults` record. The dashed lines mark the
+$\pm${{IDENTITY_STD_THRESHOLD}} flagging
 threshold.](output/figures/icarus_identity_drift.png){#fig:icarus_drift}
 
 ## Identity-replacement detection (sequence)
 
 The {{SEQ_GENOME_LENGTH}}-base reference genome is probed with a genuine read
-carrying {{SEQ_GENUINE_HAMMING}} scattered single-base errors and with a
-replaced read carrying the same scattered errors plus a coherent
-{{SEQ_CLUSTER_MIN}}-base substitution block.
+carrying {{SEQ_SCATTERED_ERRORS}} scattered single-base errors and with a
+replaced read carrying an *independent* draw of {{SEQ_SCATTERED_ERRORS}}
+scattered errors plus a coherent {{SEQ_CLUSTER_MIN}}-base substitution block.
+The two reads are matched on the number of scattered errors, not on their
+positions: the block consumes RNG draws before the scattered positions and
+removes its own loci from the available pool, so the scattered sets differ.
+What separates the probes is therefore the block alone, which is exactly the
+control the contiguous-run rule is being tested against.
 
-| Probe | {{SEQ_KMER_K}}-mer Jaccard | edit distance | longest contiguous block | verdict |
-| --- | --- | --- | --- | --- |
-| genuine | {{SEQ_GENUINE_JACCARD_MEASURED}} | {{SEQ_GENUINE_HAMMING}} | {{SEQ_GENUINE_LONGEST_RUN}} | matched |
-| replaced | {{SEQ_REPLACED_JACCARD_MEASURED}} | {{SEQ_REPLACED_EDIT_DISTANCE}} | {{SEQ_LONGEST_BLOCK}} | replacement suspected |
+| Probe | {{SEQ_KMER_K}}-mer Jaccard | Hamming | edit distance | longest contiguous block | verdict |
+| --- | --- | --- | --- | --- | --- |
+| genuine | {{SEQ_GENUINE_JACCARD_MEASURED}} | {{SEQ_GENUINE_HAMMING}} | {{SEQ_GENUINE_EDIT_DISTANCE}} | {{SEQ_GENUINE_LONGEST_RUN}} | matched |
+| replaced | {{SEQ_REPLACED_JACCARD_MEASURED}} | {{SEQ_REPLACED_HAMMING}} | {{SEQ_REPLACED_EDIT_DISTANCE}} | {{SEQ_LONGEST_BLOCK}} | replacement suspected |
+
+Hamming and edit distance are separate statistics and are reported separately:
+they coincide for the genuine read but not for the replaced one, where the
+contiguous block admits a cheaper alignment ({{SEQ_REPLACED_HAMMING}} versus
+{{SEQ_REPLACED_EDIT_DISTANCE}}).
 
 Fingerprint similarity alone does not separate the two probes — both clear the
 {{SEQ_MATCH_JACCARD}} match threshold, at {{SEQ_GENUINE_JACCARD_MEASURED}} and

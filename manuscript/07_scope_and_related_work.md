@@ -14,9 +14,12 @@ replacement hypothesis with a chi-square calibration. Sequence comparison uses
 Levenshtein edit distance (Levenshtein, 1966) together with k-mer set
 similarity, the fingerprinting idea that underpins alignment-free genome
 comparison (Ondov et al., 2016). Newton's law of cooling (Newton, 1701)
-underlies standard cold-stress exposure limits, and the immersion timeline
-follows the cold-water survival literature (Tipton, 1989; Golden and Tipton,
-2002). Ice load capacity uses the published bearing-capacity rule for floating
+underlies standard cold-stress exposure limits. The immersion module borrows
+the *clinical staging* used in the cold-water survival literature (Tipton,
+1989; Golden and Tipton, 2002) — the mild/moderate/severe core-temperature
+bands — but **not** its cooling rates: `K_REF_PER_S` is a scenario constant,
+not a calibration against that literature (see Limitations). Ice load capacity
+uses the published bearing-capacity rule for floating
 ice covers (Gold, 1971; Sodhi, 1995) with mechanical and thermal constants from
 ice physics (Hobbs, 1974). Orbital-targeting geometry follows standard two-body
 propagation (Battin, 1999; Vallado, 2013) and the mirror reflection law used by
@@ -44,5 +47,17 @@ implementation, and each is visible in the code:
 - Cold-exposure planning uses a single Newton decay rate for all operatives
   (no per-suit or per-individual variation), and the rotation planner assumes
   squads can hand over instantaneously.
+- **The immersion cooling rate is not physiologically calibrated.**
+  `hypothermia.K_REF_PER_S` is fixed so a 75 kg operative in 10 C water reaches
+  a 30 C core in 20 minutes: an initial cooling rate of about 24 C/hour, which
+  is roughly an order of magnitude faster than measured immersion cooling at
+  that water temperature. It is a film-scenario constant chosen to put the
+  rescue on a dramatic clock. Consequently §03's immersion times
+  (`HYP_TIME_TO_SEVERE_S`, `HYP_CORE_AT_REACH_C`, `HYP_MARGIN_S`) are correct
+  *for this model* and are not survival-time predictions; the module
+  demonstrates the rescue-versus-timeline decision structure, not the timeline
+  itself. Only the clinical staging thresholds (35 / 32 / 28 C) are taken from
+  the literature. `test_hypothermia.py` pins the constant to its stated
+  20-minute definition so the number and the sentence cannot drift apart.
 - The ice-structure model is a static bearing-capacity plus thermal-stress
   check; it does not model creep, crack propagation, or repeated loading.

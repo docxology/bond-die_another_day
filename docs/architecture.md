@@ -118,9 +118,9 @@ returns infeasible with zero power rather than raising.
 
 | Module | Responsibility |
 | --- | --- |
-| `mission_results.py` | The single deterministic runner. Reads the `concepts:` block of `manuscript/config.yaml`, runs all six models once under seed 7, returns a frozen `ConceptResults`. Owns the positive/negative control construction (`replacement_probe`, `genuine_probe`) and every parameter default. |
-| `manuscript_variables.py` | `load_manuscript_config`, `generate_variables` (configured-input tokens), `measured_variables` (measured-output tokens, read off `ConceptResults`), `resolve_manuscript_tree` (strict token substitution into `output/manuscript/`). |
-| `figures/plots.py` | Four deterministic renderers: pass profile, identity drift, hypothermia curve, sequence mismatch map. `_save` suppresses PNG `Date` metadata so output is byte-reproducible. |
+| `mission_results.py` | The single deterministic runner. Reads the `concepts:` block of `manuscript/config.yaml`, runs all six models once under seed 7 (the module constant `MISSION_SEED`; the config carries no seed key of its own), returns a frozen `ConceptResults`. Owns the positive/negative control construction (`replacement_probe`, `genuine_probe`) and every parameter default. `ConceptResults` also carries the probe z-vectors and the reads that were scored, so figures plot the run rather than rebuilding it. |
+| `manuscript_variables.py` | `load_manuscript_config`, `generate_variables` (configured-input tokens, declared once in `CONFIG_INPUT_TOKENS`), `measured_variables` (measured-output tokens, read off `ConceptResults`), `resolve_manuscript_tree` (strict token substitution into `output/manuscript/`). |
+| `figures/plots.py` | Four deterministic renderers: pass profile, identity drift, hypothermia curve, sequence mismatch map. `_save` suppresses PNG `Date` metadata so output is byte-reproducible — which is what lets `test_scripts_smoke` compare published PNGs byte-for-byte against a render of the runner's own arrays. |
 
 ## `mission.py` — the frozen protocol adapter
 
@@ -164,4 +164,13 @@ renaming or removing an existing one.
    section — the orphan-token test fails otherwise.
 6. Add `tests/test_<concept>.py` with real data and value assertions.
 7. If it needs a figure: a renderer in `figures/plots.py`, a call in
-   `scripts/generate_figures.py`, and a reference in `03_results.md`.
+   `scripts/generate_figures.py`, and a reference in `03_results.md`. The
+   renderer's inputs must come off the `ConceptResults` record — never rebuilt
+   in the script — and the figure needs an input-sensitivity test
+   (render twice with one input changed, require different bytes). A figure
+   that rebuilds its own probes can illustrate a different experiment than the
+   table it sits under; that has happened here once already.
+8. If it needs a new `concepts:` key: register it in
+   `manuscript_variables.CONFIG_INPUT_TOKENS` and list it in
+   `05_experimental_setup.md`, or
+   `test_every_configured_input_is_registered_and_cited` fails.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import matplotlib
@@ -66,14 +67,22 @@ def render_pass_profile(pass_plan: PassPlan, out_path: Path) -> Path:
 
 
 def render_identity_drift(
-    genuine_z: np.ndarray,
-    replaced_z: np.ndarray,
+    genuine_z: Sequence[float] | np.ndarray,
+    replaced_z: Sequence[float] | np.ndarray,
     verdict: DriftVerdict,
     out_path: Path,
     *,
     std_threshold: float = 3.0,
 ) -> Path:
-    """Render per-marker standardized trait drift for genuine vs replaced probes."""
+    """Render per-marker standardized trait drift for genuine vs replaced probes.
+
+    Both z-vectors must come from the probes that were actually scored (see
+    :class:`die_another_day.mission_results.ConceptResults`). Passing
+    ``profile.mean`` as the genuine probe yields an all-zero vector whose bars
+    are invisible, which is a degenerate negative control rather than a plot;
+    ``tests/test_scripts_smoke.py`` pins the published figure to the runner's
+    probes so that construction cannot come back.
+    """
     markers = np.arange(1, verdict.marker_count + 1)
     width = 0.38
 
