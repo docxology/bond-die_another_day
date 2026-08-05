@@ -6,6 +6,7 @@ import ast
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -84,6 +85,50 @@ def test_generate_manuscript_variables_writes_artifacts(tmp_path: Path) -> None:
     text = abstract.read_text(encoding="utf-8")
     assert "{{" not in text
     assert "ICARUS" in text
+
+
+def test_regeneration_is_byte_identical(tmp_path: Path) -> None:
+    """§06's byte-identical regeneration claim, run against the real generator.
+
+    Two full runs of the production entry point into two output roots, compared
+    file-by-file on raw bytes. Nothing is injected: the script reads the same
+    clock it would read in anger.
+
+    The ``sleep`` is deliberate, not overhead. The defect this gate exists to
+    catch was a ``GENERATION_TIMESTAMP`` hydrated from
+    ``datetime.now(...).isoformat(timespec="seconds")`` and rendered into §05
+    and the variables JSON. A second-resolution stamp only differs across two
+    runs that straddle a second boundary. Without the sleep the crossing is
+    incidental — it happens today only because each subprocess costs more than
+    a second to start and compute, which is a property of this machine, not of
+    the test. Sleeping strictly longer than one second makes the crossing
+    guaranteed on any machine, so a second-resolution stamp must differ; a
+    finer-resolution stamp differs regardless.
+
+    Verified failable: reinstating the ``GENERATION_TIMESTAMP`` token turns
+    this test red on both ``data/manuscript_variables.json`` and
+    ``manuscript/05_experimental_setup.md``.
+    """
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    result = _run("scripts/z_generate_manuscript_variables.py", "--output-dir", str(first))
+    assert result.returncode == 0, result.stderr
+    time.sleep(1.05)
+    result = _run("scripts/z_generate_manuscript_variables.py", "--output-dir", str(second))
+    assert result.returncode == 0, result.stderr
+
+    def _tree(root: Path) -> dict[str, bytes]:
+        return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
+
+    left, right = _tree(first), _tree(second)
+    assert sorted(left) == sorted(right), "the two runs wrote different file sets"
+    assert left, "the generator wrote no files — the comparison would be vacuous"
+    assert "data/manuscript_variables.json" in left
+    assert "manuscript/05_experimental_setup.md" in left
+
+    differing = sorted(name for name in left if left[name] != right[name])
+    assert differing == [], f"regeneration is not byte-identical; wall-clock or other nondeterminism in: {differing}"
 
 
 def test_generate_manuscript_variables_strict_rejects_unresolved(tmp_path: Path) -> None:

@@ -9,12 +9,12 @@ runner (`mission_results.run_all_concepts`) that executes all six under seed 7
 and one thin adapter (`mission.py`) exposing them as a frozen BOND-API
 `MissionProvider`.
 
-**Verified state, measured 2026-08-05 at commit `4de2137`:** `uv run pytest
-tests/ --cov=src --cov-fail-under=90` reports **194 passed, 100.00% coverage
-(873 statements, 206 branches, 0 missed)**. `ruff check`, `ruff format --check`,
-`mypy src/ scripts/`, and `scripts/z_generate_manuscript_variables.py` (90
-tokens resolved, strict) all pass. That reading is a dated measurement record
-with its command and commit attached, not a standing claim — the package's own
+**Verified state, measured 2026-08-05 on the tree this file ships with:** `uv
+run pytest tests/ --cov=src --cov-fail-under=90` reports **195 passed, 100.00%
+coverage (872 statements, 206 branches, 0 missed)**. `ruff check`, `ruff format
+--check`, `mypy src/ scripts/`, and `scripts/z_generate_manuscript_variables.py`
+(89 tokens resolved, strict) all pass. That reading is a dated measurement
+record with its command attached, not a standing claim — the package's own
 doctrine (`docs/agent_instructions.md`) forbids transcribing it into prose
 elsewhere. Re-run the command rather than trusting this line.
 
@@ -22,6 +22,16 @@ All ten findings in `output/verify/die_another_day.json` were closed by commit
 `4de2137` except the two recorded in
 `output/verify/die_another_day.unresolved.json`; both appear below (V2, and E6 /
 Known limitation 1).
+
+**Closed since:** the manuscript's "no wall-clock in persisted artifacts" claim
+(§00, §06, `AGENTS.md`, `docs/agent_instructions.md`) was false — a
+`GENERATION_TIMESTAMP` token was hydrated from `datetime.now()` and rendered
+into §05 and `output/data/manuscript_variables.json`, so every regeneration
+produced different bytes. The token is removed, §05 states a committed package
+version instead, §06 states the byte-identical regeneration property in scope,
+and `test_regeneration_is_byte_identical` (two real runs of the generator more
+than a second apart, compared byte-for-byte) enforces it. Confirmed failable by
+reinstating the token.
 
 ---
 
@@ -259,7 +269,7 @@ cd /Users/4d/Documents/GitHub/template/projects/working/bond/die_another_day
 
 uv sync --all-extras                                       # bond-api is a path dependency
 
-uv run pytest tests/ --cov=src --cov-fail-under=90         # 194 passed; non-zero exit below the 90% line+branch floor
+uv run pytest tests/ --cov=src --cov-fail-under=90         # 195 passed; non-zero exit below the 90% line+branch floor
 uv run ruff check src/ scripts/ tests/                     # "All checks passed!"
 uv run ruff format --check src/ scripts/ tests/            # "36 files already formatted"
 uv run mypy src/ scripts/                                  # "Success: no issues found in 22 source files"

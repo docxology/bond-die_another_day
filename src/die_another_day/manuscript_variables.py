@@ -12,6 +12,14 @@ hand-authored in prose:
   ``MissionOutcome``. Every measured number in the paper is therefore the
   number the mission computed, not a transcription of it.
 
+Neither family may read a clock. Every value written under ``output/`` comes
+from ``manuscript/config.yaml``, from the seeded concept run, or from the
+interpreter identity (``PYTHON_VERSION``) — so regenerating the tree on one
+interpreter reproduces the previous bytes exactly. A ``GENERATION_TIMESTAMP``
+token used to be hydrated here from ``datetime.now()`` and rendered into §05;
+it made every regeneration differ while §00/§06 claimed the opposite, and
+``test_regeneration_is_byte_identical`` now fails if a clock comes back.
+
 The consuming orchestrator is ``scripts/z_generate_manuscript_variables.py``
 (thin wrapper); the live cross-reference gate lives in
 ``tests/test_manuscript_variables.py``.
@@ -21,7 +29,6 @@ from __future__ import annotations
 
 import platform
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -247,8 +254,10 @@ def generate_variables(
         "NUM_CONCEPTS": str(len(CONCEPT_MODULES)),
         "CONCEPT_MODULES": ", ".join(CONCEPT_MODULES),
         "CONCEPT_NAMES": ", ".join(CONCEPT_NAMES),
+        # PYTHON_VERSION is the one environment-derived token, and it is an
+        # identity, not a clock: it is constant for a given interpreter, so it
+        # cannot break the byte-identical regeneration property.
         "PYTHON_VERSION": platform.python_version(),
-        "GENERATION_TIMESTAMP": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     for section, key, token, default in CONFIG_INPUT_TOKENS:
         block = concepts.get(section, {}) if isinstance(concepts, dict) else {}

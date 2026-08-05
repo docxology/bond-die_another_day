@@ -83,7 +83,12 @@ geometry, stated here rather than buried in a default.
 
 - Python: {{PYTHON_VERSION}}
 - Concept modules ({{NUM_CONCEPTS}}): {{CONCEPT_MODULES}}
-- Variables generated: {{GENERATION_TIMESTAMP}} (UTC)
+- Package version: {{MISSION_VERSION}} (`manuscript/config.yaml`, `paper.version`)
+
+There is deliberately no generation timestamp in this list. An earlier draft
+hydrated one from the wall clock, which made every regeneration of the
+manuscript differ in bytes while §00 and §06 claimed determinism; §06 states the
+property that replaced it, and a test enforces it.
 
 ## What is configured versus what is measured
 

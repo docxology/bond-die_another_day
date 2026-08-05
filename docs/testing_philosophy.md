@@ -62,7 +62,7 @@ does not provide.
 | `test_mission.py` | The full `MissionProvider` lifecycle, protocol conformance, gadget registration and ordering, deterministic outcome equality, discovery by slug. |
 | `test_manuscript_variables.py` | Config loading and its error paths, strict token resolution, the measured-token equality check against the runner, config-sensitivity of measured tokens, and both directions of the token/section cross-reference. |
 | `test_figures.py` | Real rendering to temp paths, PNG magic bytes, byte-identical re-renders, per-renderer input sensitivity (change one input, require different bytes), non-degeneracy of the plotted genuine probe, and the no-feasible-window branch. |
-| `test_scripts_smoke.py` | Every script executed as a real subprocess with output and exit-code assertions, the byte-comparison binding the published figures to the reported run, plus the AST-level thin-orchestrator gate. |
+| `test_scripts_smoke.py` | Every script executed as a real subprocess with output and exit-code assertions, the byte-comparison binding the published figures to the reported run, the two-run byte-identical regeneration gate on the manuscript variable generator, plus the AST-level thin-orchestrator gate. |
 
 ## Content assertions on binary artifacts
 
@@ -89,8 +89,18 @@ re-runs the concept runner and compares the entire result record, another
 changes the seed and asserts the stochastic outputs move while the pure-physics
 outputs stay identical. Figures are byte-reproducible because the saver
 suppresses matplotlib's PNG `Date` chunk, and a test compares two renders
-byte-for-byte. Persisted provenance carries `wall_time_s = 0.0` — no wall clock
-enters an artifact.
+byte-for-byte. Persisted provenance carries `wall_time_s = 0.0`.
+
+No wall clock enters an artifact — but that sentence was false for several
+commits and no test noticed, because determinism was asserted per-function
+(same inputs, same outputs) and never end-to-end. A `GENERATION_TIMESTAMP` token
+read `datetime.now()` and landed in §05 and
+`output/data/manuscript_variables.json`, so every regeneration of the manuscript
+differed. `test_regeneration_is_byte_identical` closes that class: it runs
+`scripts/z_generate_manuscript_variables.py` twice, more than a second apart,
+and compares every file it writes byte-for-byte. The lesson generalises —
+a determinism claim about *artifacts* has to be tested by regenerating the
+artifacts, not by re-calling the functions that build them.
 
 ## Coverage
 

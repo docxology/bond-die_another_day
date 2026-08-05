@@ -227,8 +227,8 @@ def test_atmospheric_transmission_is_consumed_not_just_declared() -> None:
 def test_every_generated_token_is_used_by_the_manuscript() -> None:
     """No orphan tokens: a generated token nobody cites is dead weight.
 
-    ``PYTHON_VERSION`` / ``GENERATION_TIMESTAMP`` are environment stamps and are
-    exempt only if a section actually cites them, which it does.
+    ``PYTHON_VERSION`` is an environment stamp and is exempt only if a section
+    actually cites it, which §05 and §06 do.
     """
     variables = mv.generate_variables()
     corpus = "\n".join(

@@ -81,7 +81,11 @@ disabled rather than changing the package.
 - Local-only tree: no remote, never push. Commits are path-scoped to this
   package's own repository.
 - Determinism: seed `7`; no wall-clock in persisted artifacts
-  (`wall_time_s = 0.0`); PNG `Date` metadata suppressed.
+  (`wall_time_s = 0.0`); PNG `Date` metadata suppressed. Enforced end-to-end by
+  `test_regeneration_is_byte_identical`, which regenerates the manuscript
+  variables twice a second apart and compares bytes — a `GENERATION_TIMESTAMP`
+  token from `datetime.now()` once broke this rule undetected for several
+  commits.
 - Manuscript metrics are injected tokens. Never hand-author a number in results
   prose — see [`manuscript/AGENTS.md`](manuscript/AGENTS.md).
 - Nothing may be green by construction: a new assertion needs an input that

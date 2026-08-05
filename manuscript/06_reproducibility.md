@@ -12,9 +12,25 @@ The package is deterministic by construction:
   and compares the whole `ConceptResults` record; a second test changes the
   seed and asserts the stochastic outputs move while the pure-physics ones do
   not, so the seed is demonstrably load-bearing rather than decorative.
-- **No wall-clock in artifacts**: provenance records a `wall_time_s` of `0.0`;
-  only `{{GENERATION_TIMESTAMP}}` (a manuscript token) records when variables
-  were hydrated.
+- **No wall-clock in artifacts**: provenance records a `wall_time_s` of `0.0`,
+  and nothing written under `output/` is read from a clock. This was not always
+  true: a `GENERATION_TIMESTAMP` token was hydrated from `datetime.now()` and
+  rendered into §05, so every regeneration produced different bytes while this
+  section claimed determinism. The token is gone.
+- **Byte-identical regeneration**: re-running
+  `scripts/z_generate_manuscript_variables.py` overwrites
+  `output/data/manuscript_variables.json` and `output/manuscript/*.md` with
+  bytes identical to the previous run's.
+  `test_regeneration_is_byte_identical` runs the script twice, more than one
+  second apart, and compares every produced file byte-for-byte. The gap is
+  deliberate: a second-resolution timestamp only differs across runs that
+  straddle a second boundary, so without it the gate's ability to see such a
+  stamp would depend on how long a subprocess happens to take. The claim covers
+  exactly the files that script writes; figures are covered by the separate
+  gate below. The one environment-derived token,
+  `{{PYTHON_VERSION}}`, is an interpreter identity rather than a clock and is
+  constant across runs on one interpreter — on a different Python it changes,
+  so the property is stated per-interpreter, not across machines.
 - **Byte-reproducible figures**: the figure saver suppresses matplotlib's PNG
   `Date` metadata chunk, and `tests/test_figures.py` renders each figure twice
   and compares the bytes.

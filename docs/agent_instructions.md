@@ -38,7 +38,10 @@ local-only: it has no git remote and must never be pushed.
    bootstrap, and one call into `src/`. A test parses each script and fails on a
    second top-level function, a class, or a numpy/scipy/matplotlib import.
 7. **Deterministic.** Seed `7`. No unseeded draws, no wall-clock in a persisted
-   artifact (`wall_time_s` stays `0.0`), no PNG creation-date metadata.
+   artifact (`wall_time_s` stays `0.0`), no PNG creation-date metadata. A
+   manuscript token hydrated from `datetime.now()` broke this once; the gate is
+   `test_regeneration_is_byte_identical`, which regenerates and diffs bytes
+   rather than re-calling a function with the same inputs.
 8. **Numbers come from code.** Manuscript metrics are tokens hydrated by
    `scripts/z_generate_manuscript_variables.py`. Configured inputs go through
    `generate_variables`; measured outputs go through `measured_variables`,
