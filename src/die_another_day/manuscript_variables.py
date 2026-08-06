@@ -183,6 +183,10 @@ def measured_variables(results: ConceptResults) -> dict[str, str]:
         "ICE_SHIFT_S": _fixed(ice.rotation.shift_duration_s, 1),
         "ICE_THERMAL_LOAD_DEG_S": _fixed(ice.thermal_load_deg_s, 1),
         "ICE_HEATING_ENERGY_MJ": _fixed(ice.heating_energy_j / 1e6, 1),
+        # Feasibility of the rotating roster: a measured output, so §03's
+        # ice-ops paragraph states it from the run rather than by qualitative
+        # assertion (TODO V3).
+        "ICE_ROTATION_FEASIBLE": "yes" if ice.rotation.feasible else "no",
         # --- cold-water hypothermia -----------------------------------------
         "HYP_MILD_THRESHOLD_C": _num(MILD_THRESHOLD_C),
         "HYP_MODERATE_THRESHOLD_C": _num(MODERATE_THRESHOLD_C),

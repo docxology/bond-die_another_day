@@ -293,3 +293,86 @@ A `uv` failure reading `Failed to initialize cache at ~/.cache/uv` or
 `Operation not permitted` is a sandbox restriction, not a package failure —
 re-run the same command with the sandbox disabled. Do not change the package in
 response to it.
+
+
+---
+
+## Round-2 (2026-08-06)
+
+Round-2 closed the four open-work defects (C1, V1, V2, V3) and the docs item D1
+that V1 subsumes, plus one hostile-review hardening. Every fix is verified by
+execution; the evidence below re-derives on the tree this file ships with.
+
+### Resolved
+
+**C1 — the hypothermia figure now derives its x-window from the reported run.**
+`scripts/generate_figures.py` no longer passes a hardcoded `1800.0`-second
+window. `figures/plots.py` gains `hypothermia_window_s()` and
+`HYPOTHERMIA_WINDOW_MARGIN = 1.2`, recomputing the time-to-severe from the
+config's own cooling parameters and scaling it past the severe crossing; the
+script calls it and passes the derived window. Measured this session:
+`time_to_severe` = 1802.07 s, figure window = 2162.48 s, last plotted
+temperature = 26.60 C — at or below the 28 C severe line the caption draws,
+where the old window stopped 2.07 s short.
+- Test: `test_figures.py::test_hypothermia_figure_default_window_crosses_the_severe_stage`
+  asserts `window > t_severe` and the last temperature `<= HYP.SEVERE_THRESHOLD_C`,
+  plus the `margin <= 1` validation branch.
+
+**V1 — all four published PNGs are bound to the reported run.**
+`test_scripts_smoke.py::test_published_figures_depict_the_reported_run`
+byte-compares all four figures (hypothermia now included), and
+`test_generate_figures_writes_pngs` existence-checks all four. Demonstrated
+falsifiable: the published hypothermia PNG matches a render at the
+physics-derived window and differs byte-for-byte from a render at the old
+1800 s window.
+
+**V2 — the count-not-position assertion is independently falsifiable.**
+Added `test_mission_results.py::test_sequence_position_inequality_is_a_falsifiable_predicate`:
+two reads built from the SAME seed and scattered count collide on every
+scattered position, so the count checks hold while the position sets are equal
+— proving `genuine_positions != replaced_scattered` (line 111) can evaluate to
+False and is a real discriminator rather than coincidental decoration.
+
+**V3 — an operative-starved roster propagates into the mission record.**
+Added `test_mission_results.py::test_operative_starved_roster_is_reported_infeasible`:
+one operative over a 1e5 s op (safe-exposure ceiling ~467 s) yields
+`squad_count == 1`, `shift > safe_exposure`, and `feasible is False` on
+`ConceptResults`. Roster feasibility is also now a measured manuscript token
+(`ICE_ROTATION_FEASIBLE` = "yes"/"no") rendered into §03's ice-ops paragraph
+instead of a qualitative "feasible" assertion, so the manuscript and the mission
+record cannot disagree about whether the roster holds.
+
+**D1 — testing-philosophy provenance oracle now holds for all four figures.**
+`docs/testing_philosophy.md`'s content-assertion paragraph names the hypothermia
+curve as included, matching the new four-figure byte-compare (V1 closed).
+
+**Hostile-review hardening — `ice_ops.thermal_load` rejects non-positive
+`decay_rate`.** A rate `<= 0` previously returned a silent wrong integral
+(0 for `k == 0`, clipped for `k < 0`); it now raises, matching the sibling
+cooling functions which all validate. Test:
+`test_ice_ops.py::test_thermal_load_rejects_nonpositive_decay_rate`.
+
+### Gates (measured 2026-08-06 on this tree)
+
+- `uv run pytest tests/ --cov=src --cov-fail-under=90`: **199 passed, 100.00%
+  coverage (881 statements, 210 branches, 0 missed)**.
+- `uv run ruff check src/ scripts/ tests/`: all checks passed.
+- `uv run ruff format --check src/ scripts/ tests/`: 36 files already formatted.
+- `uv run mypy src/ scripts/`: no issues found in 22 source files.
+- no-mock grep and exemplar-drift grep: clean (the README fork-lineage mention
+  and the guard commands themselves are the only "exemplar" hits, both intended).
+- `scripts/z_generate_manuscript_variables.py`: 90 tokens resolved, strict.
+
+Regression evidence recap: C1 and V1 were falsified by executing the old
+behavior (a wrong-window render diffs from the published PNG); V2 and V3 are
+pinned by the new negative-control tests above, each of which fails under its
+described mutation.
+
+### Left for a future round
+
+The extension backlog E1–E7 under Open work remains genuine future work (not
+defects): robust covariance for heavy-tailed biomarkers, unaligned sequence
+reads, conical eclipse / finite solar disc, per-operative thermal parameters
+and handover cost, ice-structure dynamics, `K_REF_PER_S` recalibration to the
+survival literature (E6 — the standing option behind Known limitation 1), and
+adopting `bond-utilities` `mission_io` for outcome persistence.

@@ -122,6 +122,7 @@ def test_measured_tokens_are_the_mission_numbers() -> None:
     assert variables["STRUCT_SAFETY_FACTOR"] == f"{results.structure.safety_factor:.2f}"
     assert variables["MIRROR_N_FEASIBLE"] == str(results.mirror.n_feasible)
     assert variables["MIRROR_BEST_FLUX_W_M2"] == f"{results.mirror.best_flux_w_m2:.2f}"
+    assert variables["ICE_ROTATION_FEASIBLE"] == ("yes" if results.ice.rotation.feasible else "no")
 
 
 def test_measured_tokens_track_the_configuration(tmp_path: Path) -> None:

@@ -76,7 +76,11 @@ cheap comparisons into real oracles:
   bytes to differ. A dropped argument makes them identical.
 * **provenance** — compare the published PNG against a render built from
   `run_all_concepts` output. Any divergence between what is plotted and what is
-  reported shows up as a byte difference.
+  reported shows up as a byte difference. This now holds for **all four**
+  published figures, including the hypothermia curve, whose x-window is derived
+  from the reported physics (`hypothermia_window_s`) so it cannot drift from the
+  run; `test_published_figures_depict_the_reported_run` byte-compares all four
+  (TODO D1 / V1).
 
 Prefer either to a size check. A file-existence assertion on a figure is the
 binary-artifact form of "assert load >= 0".

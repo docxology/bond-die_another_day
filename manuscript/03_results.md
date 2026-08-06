@@ -78,7 +78,8 @@ From the configured physics (ambient {{ICE_ENV_TEMP_C}} C, core
 {{ICE_SAFE_EXPOSURE_S}} s. The {{ICE_OP_DURATION_S}}-second operation is
 therefore split across {{ICE_SQUADS}} rotating squads drawn from the
 {{ICE_NUM_OPERATIVES}} available operatives, giving a {{ICE_SHIFT_S}}-second
-shift — inside the ceiling, so the roster is feasible. Each shift accrues
+shift — inside the ceiling, so the roster is feasible ({{ICE_ROTATION_FEASIBLE}}).
+Each shift accrues
 {{ICE_THERMAL_LOAD_DEG_S}} degree-seconds of core depression below
 normothermia, and holding the interior at comfort against the ambient costs
 {{ICE_HEATING_ENERGY_MJ}} MJ over the operation.

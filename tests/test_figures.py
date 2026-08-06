@@ -15,13 +15,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from die_another_day import identity_detection as idmod
 from die_another_day import manuscript_variables as mv
 from die_another_day import mission_results as mr
 from die_another_day import orbital_mirror as om
+from die_another_day import hypothermia as hyp
 from die_another_day import sequence_identity as si
 from die_another_day.figures import (
+    hypothermia_window_s,
     render_hypothermia_curve,
     render_identity_drift,
     render_pass_profile,
@@ -164,3 +167,26 @@ def test_sequence_mismatch_map_is_reproducible(tmp_path: Path) -> None:
     a = render_sequence_mismatches(reference, probe, tmp_path / "s1.png")
     b = render_sequence_mismatches(reference, probe, tmp_path / "s2.png")
     assert a.read_bytes() == b.read_bytes()
+
+
+def test_hypothermia_figure_default_window_crosses_the_severe_stage(tmp_path: Path) -> None:
+    """The figure's default window extends past the severe (28 C) crossing.
+
+    The published curve used to stop ~2 s short of the severe stage it labels,
+    on a hardcoded 1800 s window (TODO C1). The default window is derived from
+    the physics — time-to-severe times a margin — so the final plotted
+    temperature sits at or below the severe threshold, and the renderer used by
+    the production script produces that window.
+    """
+    water_c, mass_kg, insulation = 10.0, 75.0, 0.9
+    window = hypothermia_window_s(water_c, mass_kg, insulation)
+    k = hyp.cooling_rate_water(mass_kg, insulation)
+    t_severe = hyp.time_to_core_temp(37.0, hyp.SEVERE_THRESHOLD_C, water_c, k)
+    last_temp = hyp.immersion_core_temp(37.0, water_c, k, window)
+    assert window > t_severe
+    assert last_temp <= hyp.SEVERE_THRESHOLD_C
+
+    out = render_hypothermia_curve(water_c, mass_kg, insulation, window, tmp_path / "h.png")
+    assert out.read_bytes()[:8] == PNG_MAGIC
+    with pytest.raises(ValueError):
+        hypothermia_window_s(water_c, mass_kg, insulation, margin=1.0)

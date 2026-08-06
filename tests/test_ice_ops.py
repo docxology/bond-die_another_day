@@ -117,6 +117,20 @@ def test_thermal_load_nonpositive_exposure_zero() -> None:
     assert ice_ops.thermal_load(BODY, ENV, K, -5.0) == 0.0
 
 
+def test_thermal_load_rejects_nonpositive_decay_rate() -> None:
+    """A non-positive decay rate must not silently return a nonsense integral.
+
+    Previously ``thermal_load(37, -34, 0, 100)`` returned exactly 0 (the
+    constant-temperature degenerate case) and a *negative* rate returned a
+    growing gap clipped to zero — both silent wrong answers. Guard it like the
+    sibling cooling functions (regression from the hostile-review pass).
+    """
+    with pytest.raises(ValueError, match="decay_rate"):
+        ice_ops.thermal_load(BODY, ENV, 0.0, 100.0)
+    with pytest.raises(ValueError, match="decay_rate"):
+        ice_ops.thermal_load(BODY, ENV, -1.0, 100.0)
+
+
 def test_heating_energy_cold_env() -> None:
     energy = ice_ops.heating_energy(ENV, 1800.0, 1500.0)
     assert energy > 0.0

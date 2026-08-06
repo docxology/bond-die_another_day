@@ -16,6 +16,7 @@ import pytest
 from die_another_day import identity_detection as idm
 from die_another_day import manuscript_variables as mv
 from die_another_day import mission_results as mr
+from die_another_day import sequence_identity as si
 
 
 @pytest.fixture(scope="module")
@@ -110,6 +111,55 @@ def test_the_two_reads_are_matched_on_count_not_on_position(results: mr.ConceptR
     assert len(replaced_scattered) == scattered
     assert genuine_positions != replaced_scattered
     assert results.sequence_replaced.hamming == scattered + (block[1] - block[0])
+
+
+def test_sequence_position_inequality_is_a_falsifiable_predicate() -> None:
+    """Line 111's ``!=`` can evaluate to False, so it discriminates (TODO V2).
+
+    The TODO worried that ``genuine_positions != replaced_scattered`` might be
+    true only by coincidence of the seeded runs. Prove the predicate is a real
+    discriminator: two reads built from the SAME seed and the same scattered
+    count collide on every scattered position (they are identical reads), so
+    the count checks pass while the position sets are equal — exactly the
+    degraded-generator mutation that must turn line 111 red. Reaching that case
+    through the public API shows the ``!=`` is independently falsifiable.
+    """
+    config = mv.load_manuscript_config()["concepts"]["sequence_identity"]
+    scattered = int(config["scattered_errors"])
+    genome_length = int(config["genome_length"])
+    reference = si.generate_genome(genome_length, seed=7)
+
+    def positions(read: str) -> set[int]:
+        return {i for i, (a, b) in enumerate(zip(reference, read, strict=True)) if a != b}
+
+    read_a = si.mutate_genome(reference, seed=99, n_substitutions=scattered)
+    read_b = si.mutate_genome(reference, seed=99, n_substitutions=scattered)
+    assert read_a == read_b
+    assert len(positions(read_a)) == scattered
+    assert positions(read_a) == positions(read_b)  # the negation of line 111
+
+
+def test_operative_starved_roster_is_reported_infeasible(config: dict[str, Any]) -> None:
+    """An undersized roster must propagate an infeasible plan into the record.
+
+    Previously only a unit test proved ``plan_rotation`` could return
+    ``feasible=False`` via its operative-limited branch; nothing asserted that
+    an operative-starved configuration reaches ``ConceptResults`` (TODO V3).
+    Run the real runner over a config with one operative fighting a long op
+    whose safe-exposure ceiling is far shorter, and require the record to flag
+    the roster infeasible.
+    """
+    starved = {
+        **config,
+        "concepts": {
+            **config["concepts"],
+            "ice_ops": {**config["concepts"]["ice_ops"], "num_operatives": 1, "op_duration_s": 1e5},
+        },
+    }
+    results = mr.run_all_concepts(starved)
+    assert results.ice.rotation.squad_count == 1
+    assert results.ice.rotation.shift_duration_s > results.ice.safe_exposure_s
+    assert results.ice.rotation.feasible is False
 
 
 def test_generator_places_exactly_the_configured_number_of_scattered_errors(

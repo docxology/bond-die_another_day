@@ -28,6 +28,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from die_another_day.figures import (  # noqa: E402
+    hypothermia_window_s,
     render_hypothermia_curve,
     render_identity_drift,
     render_pass_profile,
@@ -57,13 +58,20 @@ def main() -> int:
         std_threshold=float(concepts["identity"]["std_threshold"]),
     )
 
-    # Cold-water hypothermia curve
+    # Cold-water hypothermia curve — window derived from the reported physics
+    # (time-to-severe * margin) so the curve crosses the severe stage it labels
+    # instead of stopping short of it on a hardcoded literal (TODO C1 / V1).
     hypc = concepts["hypothermia"]
+    hyp_window = hypothermia_window_s(
+        float(hypc["water_temp_c"]),
+        float(hypc["body_mass_kg"]),
+        float(hypc["insulation_factor"]),
+    )
     hyp_path = render_hypothermia_curve(
         float(hypc["water_temp_c"]),
         float(hypc["body_mass_kg"]),
         float(hypc["insulation_factor"]),
-        1800.0,
+        hyp_window,
         out_dir / "icarus_hypothermia_curve.png",
     )
 

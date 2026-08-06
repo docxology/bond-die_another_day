@@ -17,7 +17,41 @@ from die_another_day import sequence_identity as si  # noqa: E402
 from die_another_day.identity_detection import DriftVerdict  # noqa: E402
 from die_another_day.orbital_mirror import PassPlan  # noqa: E402
 
-__all__ = ["render_hypothermia_curve", "render_identity_drift", "render_pass_profile", "render_sequence_mismatches"]
+#: How far past the severe-crossing instant the hypothermia figure's x-window
+#: extends (a fraction of the time-to-severe). Must exceed 1 so the plotted
+#: curve demonstrably crosses the 28 C severe line, instead of stopping short
+#: of the very thing its caption calls attention to (TODO C1 / V1).
+HYPOTHERMIA_WINDOW_MARGIN = 1.2
+
+__all__ = [
+    "HYPOTHERMIA_WINDOW_MARGIN",
+    "hypothermia_window_s",
+    "render_hypothermia_curve",
+    "render_identity_drift",
+    "render_pass_profile",
+    "render_sequence_mismatches",
+]
+
+
+def hypothermia_window_s(
+    water_c: float,
+    mass_kg: float,
+    insulation_factor: float,
+    margin: float = HYPOTHERMIA_WINDOW_MARGIN,
+) -> float:
+    """X-window (s) for the hypothermia figure, comfortably past the severe stage.
+
+    Recomputed from the same physics the mission runs — the cooling rate and
+    the closed-form time to the 28 C severe stage from the config's own
+    parameters — then scaled by ``margin > 1``. Because it is derived from
+    those parameters rather than a hardcoded literal, the published curve's
+    window can never drift from the reported time-to-severe (TODO C1 / V1).
+    """
+    if margin <= 1.0:
+        raise ValueError("margin must be > 1 so the window passes the severe crossing")
+    k = hyp.cooling_rate_water(mass_kg, insulation_factor)
+    t_severe = hyp.time_to_core_temp(37.0, hyp.SEVERE_THRESHOLD_C, water_c, k)
+    return margin * t_severe
 
 
 def _save(fig: plt.Figure, out_path: Path) -> Path:
@@ -107,7 +141,13 @@ def render_hypothermia_curve(
     duration_s: float,
     out_path: Path,
 ) -> Path:
-    """Render the cold-water immersion core-temperature decay with stage bands."""
+    """Render the cold-water immersion core-temperature decay with stage bands.
+
+    ``duration_s`` is the x-window. The production script derives it from the
+    reported physics via :func:`hypothermia_window_s`, so the published curve
+    extends past the severe-stage crossing it labels rather than stopping short
+    of it on a hardcoded literal (TODO C1 / V1).
+    """
     times = np.linspace(0.0, duration_s, 512)
     k = hyp.cooling_rate_water(mass_kg, insulation_factor)
     temps = np.array([hyp.immersion_core_temp(37.0, water_c, k, float(t)) for t in times])

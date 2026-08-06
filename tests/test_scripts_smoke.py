@@ -13,6 +13,8 @@ import pytest
 
 from die_another_day import manuscript_variables as mv
 from die_another_day.figures import (
+    hypothermia_window_s,
+    render_hypothermia_curve,
     render_identity_drift,
     render_pass_profile,
     render_sequence_mismatches,
@@ -149,8 +151,13 @@ def test_generate_manuscript_variables_strict_rejects_unresolved(tmp_path: Path)
 def test_generate_figures_writes_pngs() -> None:
     result = _run("scripts/generate_figures.py")
     assert result.returncode == 0, result.stderr
-    assert (ROOT / "output" / "figures" / "icarus_pass_profile.png").is_file()
-    assert (ROOT / "output" / "figures" / "icarus_identity_drift.png").is_file()
+    for name in (
+        "icarus_pass_profile.png",
+        "icarus_identity_drift.png",
+        "icarus_hypothermia_curve.png",
+        "icarus_sequence_mismatch.png",
+    ):
+        assert (ROOT / "output" / "figures" / name).is_file(), name
 
 
 def test_published_figures_depict_the_reported_run(tmp_path: Path) -> None:
@@ -183,11 +190,22 @@ def test_published_figures_depict_the_reported_run(tmp_path: Path) -> None:
         tmp_path / "seq.png",
     )
     expected_pass = render_pass_profile(results.mirror, tmp_path / "pass.png")
+    hyp_cfg = config["concepts"]["hypothermia"]
+    expected_hyp = render_hypothermia_curve(
+        float(hyp_cfg["water_temp_c"]),
+        float(hyp_cfg["body_mass_kg"]),
+        float(hyp_cfg["insulation_factor"]),
+        hypothermia_window_s(
+            float(hyp_cfg["water_temp_c"]), float(hyp_cfg["body_mass_kg"]), float(hyp_cfg["insulation_factor"])
+        ),
+        tmp_path / "hyp.png",
+    )
 
     figures = ROOT / "output" / "figures"
     assert (figures / "icarus_identity_drift.png").read_bytes() == expected_drift.read_bytes()
     assert (figures / "icarus_sequence_mismatch.png").read_bytes() == expected_seq.read_bytes()
     assert (figures / "icarus_pass_profile.png").read_bytes() == expected_pass.read_bytes()
+    assert (figures / "icarus_hypothermia_curve.png").read_bytes() == expected_hyp.read_bytes()
 
 
 SCRIPTS = [

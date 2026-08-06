@@ -188,6 +188,10 @@ def thermal_load(
     """
     if exposure_s <= 0.0:
         return 0.0
+    if decay_rate <= 0.0:
+        # A non-positive rate silently returns a wrong (zero or growing-gap)
+        # integral today; reject it like the sibling cooling functions do.
+        raise ValueError("decay_rate must be positive")
     grid = np.linspace(0.0, exposure_s, 2048)
     temps = env_temp + (body_temp - env_temp) * np.exp(-decay_rate * grid)
     deficit = np.maximum(0.0, reference_temp - temps)

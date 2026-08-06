@@ -7,6 +7,7 @@ from explicit orchestration paths (scripts / tests) into ``output/figures/``.
 from __future__ import annotations
 
 from .plots import (
+    hypothermia_window_s,
     render_hypothermia_curve,
     render_identity_drift,
     render_pass_profile,
@@ -14,6 +15,7 @@ from .plots import (
 )
 
 __all__ = [
+    "hypothermia_window_s",
     "render_hypothermia_curve",
     "render_identity_drift",
     "render_pass_profile",
