@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "identifier": "die_another_day",
   "name": "die_another_day: ICARUS — Special-Agent Mission Software",
-  "description": "PROJECT BOND film package for Die Another Day (2002), mission codename ICARUS. Pure deterministic mission software: biometric identity-replacement detection, ice-palace cold-environment operations planning, and orbital-mirror targeting, exposed through a frozen BOND-API MissionProvider.",
+  "description": "PROJECT BOND film package for Die Another Day (2002), mission codename ICARUS. Six pure deterministic domain concepts — biometric identity-replacement detection, DNA sequence identity verification, ice-palace thermal operations, cold-water immersion risk, ice-structure integrity, and orbital-mirror targeting — exposed through a frozen BOND-API MissionProvider.",
   "version": "0.1.0",
   "license": "https://spdx.org/licenses/MIT",
   "author": [
@@ -22,5 +22,5 @@
     "mission software"
   ],
   "programmingLanguage": "Python",
-  "codeRepository": "https://github.com/docxology/die_another_day"
+  "codeRepository": "https://github.com/docxology/bond-die_another_day"
 }

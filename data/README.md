@@ -1,13 +1,8 @@
 # die_another_day/data
 
-Project-maintained **inputs** for the code exemplar (not pipeline outputs).
-
-## Quick reference
-
-| File | Role |
-| --- | --- |
-| `claim_ledger.yaml` | Source-backed numeric and artifact claims for evidence validation |
+Reserved for project-maintained **inputs** (not pipeline outputs). No inputs
+are committed yet; document any added file here with its role.
 
 Generated analysis outputs belong under `output/` during pipeline runs, not here.
 
-Schema and edit protocol: [`AGENTS.md`](AGENTS.md).
+Edit protocol: [`AGENTS.md`](AGENTS.md).

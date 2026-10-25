@@ -1,5 +1,5 @@
 # die_another_day — ICARUS (Die Another Day, 2002) · PROJECT BOND film package
-# Inherits workspace settings from root pyproject.toml
+# Standalone package: package-local settings and its own uv.lock.
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
+bond-api = { path = "../bond-api" }
 
 [project.optional-dependencies]
 dev = [
@@ -44,8 +44,8 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short --strict-markers"
 
 [tool.coverage.run]
-# Core Template Rule: coverage is calculated only for primary source (`src/`),
-# so test code does not inflate the metric.
+# Coverage is calculated only for primary source (`src/`), so test code does
+# not inflate the metric.
 source = ["src"]
 branch = true
 omit = [
@@ -66,8 +66,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-# Project-local mypy settings (the monorepo root config has no mypy_path for
-# this package's src/ layout).
+# Project-local mypy settings for this package's src/ layout.
 python_version = "3.12"
 mypy_path = ["src"]
 explicit_package_bases = true
@@ -80,5 +79,11 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 ignore_missing_imports = true
 
-[tool.uv]
-# Inherits workspace settings from root pyproject.toml
+[tool.ruff]
+# Package-local replacement for the monorepo-root ruff settings this package
+# was written against (the root pyproject no longer exists): 120-column code and
+# the default E4/E7/E9/F lint set, under which the tree is clean.
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

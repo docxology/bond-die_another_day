@@ -63,7 +63,8 @@ git status --short
 Coverage gate: 90% line **and** branch on `src/`. Do not transcribe the measured
 percentage into any document — quote the gate, run the command.
 
-Two greps that should stay clean:
+Two greps to keep in the loop (the second matches only the guard lines that
+spell the pattern):
 
 ```bash
 grep -rn "unittest.mock\|MagicMock\|mocker.patch\|create_autospec" tests/ || echo "no mocks"
@@ -76,9 +77,10 @@ disabled rather than changing the package.
 
 ## Hard guardrails
 
-- Scope is exactly this directory. Never touch a sibling package, the bond root
-  files, or the template repo.
-- Local-only tree: no remote, never push. Commits are path-scoped to this
+- Scope is exactly this directory. Never touch a sibling package or the bond
+  root files.
+- Remote: `origin` → `github.com/docxology/bond-die_another_day`; never
+  force-push or rewrite published history. Commits are path-scoped to this
   package's own repository.
 - Determinism: seed `7`; no wall-clock in persisted artifacts
   (`wall_time_s = 0.0`); PNG `Date` metadata suppressed. Enforced end-to-end by

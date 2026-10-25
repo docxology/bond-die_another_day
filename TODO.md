@@ -18,10 +18,10 @@ record with its command attached, not a standing claim — the package's own
 doctrine (`docs/agent_instructions.md`) forbids transcribing it into prose
 elsewhere. Re-run the command rather than trusting this line.
 
-All ten findings in `output/verify/die_another_day.json` were closed by commit
-`4de2137` except the two recorded in
-`output/verify/die_another_day.unresolved.json`; both appear below (V2, and E6 /
-Known limitation 1).
+All ten findings in the verifier's `output/verify/die_another_day.json` (a
+generated, git-ignored artifact) were closed by commit `4de2137` except the two
+recorded in `output/verify/die_another_day.unresolved.json`; both appear below
+(V2, and E6 / Known limitation 1).
 
 **Closed since:** the manuscript's "no wall-clock in persisted artifacts" claim
 (§00, §06, `AGENTS.md`, `docs/agent_instructions.md`) was false — a
@@ -265,8 +265,7 @@ Accepted scope, recorded so nobody re-opens them as findings.
 Run every command; read every result. All are expected to pass on a clean tree.
 
 ```bash
-cd /Users/4d/Documents/GitHub/template/projects/working/bond/die_another_day
-
+# run from the package root
 uv sync --all-extras                                       # bond-api is a path dependency
 
 uv run pytest tests/ --cov=src --cov-fail-under=90         # 195 passed; non-zero exit below the 90% line+branch floor
@@ -282,7 +281,8 @@ uv run python scripts/z_generate_manuscript_variables.py   # strict: an unresolv
 git status --short                                         # empty; output/ is git-ignored
 ```
 
-Two greps that must stay clean:
+Two greps to keep in the loop (the second matches only the guard lines that
+spell the pattern):
 
 ```bash
 grep -rn "unittest.mock\|MagicMock\|mocker.patch\|create_autospec" tests/ || echo "no mocks"
@@ -359,8 +359,8 @@ cooling functions which all validate. Test:
 - `uv run ruff check src/ scripts/ tests/`: all checks passed.
 - `uv run ruff format --check src/ scripts/ tests/`: 36 files already formatted.
 - `uv run mypy src/ scripts/`: no issues found in 22 source files.
-- no-mock grep and exemplar-drift grep: clean (the README fork-lineage mention
-  and the guard commands themselves are the only "exemplar" hits, both intended).
+- no-mock grep and exemplar-drift grep: clean (the guard lines that spell the
+  pattern are the only "exemplar" hits, and they are the check itself).
 - `scripts/z_generate_manuscript_variables.py`: 90 tokens resolved, strict.
 
 Regression evidence recap: C1 and V1 were falsified by executing the old

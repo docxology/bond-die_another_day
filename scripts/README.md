@@ -12,7 +12,7 @@ Thin orchestrators. Each script adds `src/` to `sys.path` and delegates to
 | `plan.py` | Plan phase. |
 | `execute.py` | Execute phase (prints outcome JSON). |
 | `debrief.py` | Debrief phase (prints lessons). |
-| `generate_figures.py` | Renders both concept figures into `output/figures/`. |
+| `generate_figures.py` | Renders the four concept figures into `output/figures/`. |
 | `z_generate_manuscript_variables.py` | Hydrates `{{TOKEN}}`s from `manuscript/config.yaml` (strict by default). |
 
 Run from the package root, e.g. `uv run python scripts/run_mission.py`.

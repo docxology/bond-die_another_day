@@ -106,7 +106,5 @@ failure; re-run it with the sandbox disabled.
 | [`AGENTS.md`](AGENTS.md) | Build/test/verify instructions for agents |
 | [`TODO.md`](TODO.md) | Remaining work |
 
-This package was forked from the `template_code_project` exemplar; that lineage
-is the only reason the exemplar's name appears in documentation.
-
-Local-only working tree: this package has no remote and is never pushed.
+Published to `origin` (`github.com/docxology/bond-die_another_day`, default
+branch `main`); never force-push or rewrite published history.

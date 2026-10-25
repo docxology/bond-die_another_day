@@ -2,26 +2,10 @@
 
 Versioned project **inputs** only. Pipeline outputs must not be committed here.
 
-## `claim_ledger.yaml`
+## Rules
 
-Evidence-registry for manuscript claims that are intentionally sourced from code, examples, or generated reports rather than `{{VARIABLE}}` injection.
-
-### Schema (preserve when adding rows)
-
-| Field | Purpose |
-| --- | --- |
-| `claim_id` | Stable identifier |
-| `kind` | Claim category |
-| `value` | Declared numeric or textual value |
-| `source` | Provenance (module, manuscript section, artifact) |
-| `source_tier` | Trust tier for validation |
-| `freshness` | Staleness policy |
-| `artifact_path` | Optional path to backing file |
-
-## Edit protocol
-
-1. Edit only when manuscript claims, figure defaults, or source-backed numeric facts change.
-2. Re-run evidence validation / pipeline stages that consume the ledger.
-3. Do not store generated CSV/JSON/PNG under `data/`.
+1. Commit human-authored or externally sourced inputs only — never generated CSV/JSON/PNG/artifacts.
+2. Record every added file in [`README.md`](README.md) with its role.
+3. Keep inputs deterministic: no wall-clock timestamps or machine-specific paths.
 
 Quick orientation: [`README.md`](README.md).

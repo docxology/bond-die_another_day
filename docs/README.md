@@ -1,7 +1,7 @@
 # docs/ — agent-facing documentation for `die_another_day` (ICARUS)
 
 The technical rulebook for working inside this package. It documents the
-package as it actually is, not as the exemplar it was forked from.
+package as it actually is.
 
 ## What lives here
 

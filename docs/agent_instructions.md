@@ -5,8 +5,9 @@ Read-first operational rules for anyone (human or agent) editing this package.
 ## Scope
 
 Your working scope is exactly this directory. Never modify a sibling BOND
-package, the bond root files, or the template repository. This tree is
-local-only: it has no git remote and must never be pushed.
+package or the bond root files. The tree publishes to `origin`
+(`github.com/docxology/bond-die_another_day`, default branch `main`); never
+force-push or rewrite published history.
 
 ## The rules
 
