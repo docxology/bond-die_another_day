@@ -9,11 +9,11 @@ runner (`mission_results.run_all_concepts`) that executes all six under seed 7
 and one thin adapter (`mission.py`) exposing them as a frozen BOND-API
 `MissionProvider`.
 
-**Verified state, measured 2026-08-05 on the tree this file ships with:** `uv
-run pytest tests/ --cov=src --cov-fail-under=90` reports **195 passed, 100.00%
-coverage (872 statements, 206 branches, 0 missed)**. `ruff check`, `ruff format
+**Verified state, measured 2026-08-06 on the tree this file ships with:** `uv
+run pytest tests/ --cov=src --cov-fail-under=90` reports **199 passed, 100.00%
+coverage (881 statements, 210 branches, 0 missed)**. `ruff check`, `ruff format
 --check`, `mypy src/ scripts/`, and `scripts/z_generate_manuscript_variables.py`
-(89 tokens resolved, strict) all pass. That reading is a dated measurement
+(90 tokens resolved, strict) all pass. That reading is a dated measurement
 record with its command attached, not a standing claim — the package's own
 doctrine (`docs/agent_instructions.md`) forbids transcribing it into prose
 elsewhere. Re-run the command rather than trusting this line.
@@ -266,9 +266,9 @@ Run every command; read every result. All are expected to pass on a clean tree.
 
 ```bash
 # run from the package root
-uv sync --all-extras                                       # bond-api is a path dependency
+uv sync --extra dev                                        # bond-api is a path dependency
 
-uv run pytest tests/ --cov=src --cov-fail-under=90         # 195 passed; non-zero exit below the 90% line+branch floor
+uv run pytest tests/ --cov=src --cov-fail-under=90         # non-zero exit below the 90% line+branch floor
 uv run ruff check src/ scripts/ tests/                     # "All checks passed!"
 uv run ruff format --check src/ scripts/ tests/            # "36 files already formatted"
 uv run mypy src/ scripts/                                  # "Success: no issues found in 22 source files"
