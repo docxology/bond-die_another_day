@@ -13,7 +13,7 @@ description = "ICARUS — special-agent mission software: biometric identity-rep
 authors = [
     {name = "Daniel Ari Friedman", email = "daniel@activeinference.institute"}
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.24.0",
     "scipy>=1.10.0",
