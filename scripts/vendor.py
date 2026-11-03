@@ -10,10 +10,10 @@ upstream, so the edit belongs upstream and is re-copied with ``--refresh``.
 
     scripts/vendor.py --check
     scripts/vendor.py --refresh --from <upstream checkout> [--sha <commit>]
-    scripts/vendor.py --refresh            # re-seal the checker hash only; refuses on drift
+    scripts/vendor.py --refresh            # re-seal the checker hash; refuses on drift
 
-Only recorded paths are copied and checked. Artefacts the build writes into the copy (``build/``,
-``*.egg-info/``) are outside the recorded set and are git-ignored.
+Only recorded paths are copied and checked. Artefacts the build writes into the
+copy (``build/``, ``*.egg-info/``) are outside the recorded set and git-ignored.
 """
 
 from __future__ import annotations
@@ -34,17 +34,24 @@ CHECKER = Path(__file__).resolve()
 MANIFEST_NAME = "PROVENANCE.json"
 VENDOR_NOTE = "VENDOR.md"
 SHA_MARKER = "<!-- vendored-sha: {sha} -->"
-REQUIRED = ("package", "module_path", "source_repository", "sha", "copied_paths", "sha256")
+REQUIRED = (
+    "package",
+    "module_path",
+    "source_repository",
+    "sha",
+    "copied_paths",
+    "sha256",
+)
 #: The project metadata a `directory` source is resolved from, at the copy's root.
 METADATA_FILES = ("pyproject.toml", "LICENSE", "README.md")
 
 
 def default_module_path(distribution: str) -> str:
-    """The copied module tree, from the distribution name: ``bond-api`` -> ``src/bond_api``.
+    """The copied module tree for a distribution: ``bond-api`` -> ``src/bond_api``.
 
-    The directory itself keeps the distribution name, because a vendored project may declare
-    sibling sources of its own (``../bond-api``); inside ``vendor/`` those resolve to the sibling
-    copy exactly as they resolved in the suite.
+    The directory keeps the distribution name, because a vendored project may
+    declare sibling sources of its own (``../bond-api``); inside ``vendor/``
+    those resolve to the sibling copy exactly as they resolved in the suite.
     """
     return f"src/{distribution.replace('-', '_')}"
 
@@ -119,8 +126,9 @@ class Manifest:
         return f"""{SHA_MARKER.format(sha=self.sha)}
 # Vendored `{self.package}`
 
-This directory is a **copy, not a fork**: every file here is byte-identical to its upstream path at
-the commit below, and `scripts/vendor.py --check` fails the moment that stops being true.
+This directory is a **copy, not a fork**: every file here is byte-identical to
+its upstream path at the commit below, and `scripts/vendor.py --check` fails the
+moment that stops being true.
 
 | | |
 | --- | --- |
@@ -129,9 +137,10 @@ the commit below, and `scripts/vendor.py --check` fails the moment that stops be
 | Copied | {len(self.copied_paths)} files — `{self.module_path}/**` plus {listed} |
 | Not copied | upstream `tests/`, `docs/`, `uv.lock`, and CI configuration |
 
-**Why it is here.** The package is not installable from an index, and the primary consumer of this
-repository clones it *alone* — Dependabot's update jobs run in a single-repository checkout — so a
-suite-relative path cannot resolve there.
+**Why it is here.** The package is not installable from an index, and the
+primary consumer of this repository clones it *alone* — Dependabot's update jobs
+run in a single-repository checkout — so a suite-relative path cannot resolve
+there.
 
 **Refreshing.** Re-copy from a clean upstream checkout and re-record:
 
@@ -139,8 +148,9 @@ suite-relative path cannot resolve there.
 scripts/vendor.py --refresh --from <path to a {self.package} checkout> [--sha <commit>]
 ```
 
-Edits belong upstream. A change made here is caught by `scripts/vendor.py --check`, which
-`tests/test_vendor_provenance.py` runs inside this package's own gate.
+Edits belong upstream. A change made here is caught by
+`scripts/vendor.py --check`, which `tests/test_vendor_provenance.py` runs inside
+this package's own gate.
 """
 
 
@@ -217,7 +227,12 @@ def check() -> int:
 
 
 def git(source: Path, *arguments: str) -> str:
-    result = subprocess.run(["git", "-C", str(source), *arguments], capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        ["git", "-C", str(source), *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     if result.returncode:
         raise SystemExit(f"{source}: git {' '.join(arguments)}: {result.stderr.strip()}")
     return result.stdout.strip()
@@ -282,7 +297,7 @@ def refresh_from(
 
 
 def reseal() -> int:
-    """Re-record the checker hash after a deliberate change, refusing if any copy has drifted."""
+    """Re-record the checker hash after a deliberate change; refuse on drift."""
     found = manifests()
     for manifest in found:
         drifted = [
@@ -317,7 +332,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.source:
         if not args.package:
             parser.error("--from requires --package")
-        return refresh_from(args.package, Path(args.source).resolve(), args.sha, args.repository, args.module_path)
+        return refresh_from(
+            args.package,
+            Path(args.source).resolve(),
+            args.sha,
+            args.repository,
+            args.module_path,
+        )
     if args.sha:
         parser.error("--sha is only meaningful with --from")
     return reseal()
