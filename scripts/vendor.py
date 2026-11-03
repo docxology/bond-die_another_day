@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Check, and refresh, the vendored copies under ``vendor/``.
 
-A vendored copy is a dependency, not a fork: every file under ``vendor/<name>/`` is a byte-for-byte
-copy of its upstream path at the commit recorded in ``vendor/<name>/PROVENANCE.json``. An edit made
-here splits the copy from upstream, so the edit belongs upstream and is re-copied with ``--refresh``.
+A vendored copy is a dependency, not a fork: every file under ``vendor/<name>/``
+is a byte-for-byte copy of its upstream path at the commit recorded in
+``vendor/<name>/PROVENANCE.json``. An edit made here splits the copy from
+upstream, so the edit belongs upstream and is re-copied with ``--refresh``.
 ``--check`` is what enforces that, and it runs inside the package's own pytest gate
 (``tests/test_vendor_provenance.py``), so a copy that drifts turns that repository red.
 
@@ -186,9 +187,9 @@ def check_one(manifest: Manifest) -> list[str]:
             findings.append(f"{name}: recorded, missing on disk")
         elif sha256(path) != digest:
             findings.append(f"{name}: differs from the recorded copy")
-    for name in manifest.module_tree():
-        if name not in manifest.sha256:
-            findings.append(f"{name}: not part of the recorded copy")
+    findings.extend(
+        f"{name}: not part of the recorded copy" for name in manifest.module_tree() if name not in manifest.sha256
+    )
     if manifest.aggregate_sha256 != aggregate(manifest.sha256):
         findings.append("PROVENANCE.json: the aggregate hash disagrees with the per-file hashes")
     note = manifest.directory / VENDOR_NOTE
