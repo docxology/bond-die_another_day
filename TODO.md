@@ -376,3 +376,11 @@ reads, conical eclipse / finite solar disc, per-operative thermal parameters
 and handover cost, ice-structure dynamics, `K_REF_PER_S` recalibration to the
 survival literature (E6 — the standing option behind Known limitation 1), and
 adopting `bond-utilities` `mission_io` for outcome persistence.
+
+## Workflowz review — 2026-11-10
+
+No new concrete, independently evidenced improvement survived this bounded review. Inspected the root agent/build contract, README, existing TODO, Python and dependency declarations, the supplied mission orchestrator, package/figure exports, figure renderers, ice-structure calculations, and biometric identity detection. The visible production paths contain real implementations; no silent mock, fake, stub, or `NotImplemented` production substitute was identified.
+
+The TODO's historical hypothermia-figure items were not re-filed: the supplied `src/die_another_day/figures/plots.py:20-54` now derives `hypothermia_window_s` from the cooling model and a margin greater than one, while the current orchestrator/tests needed to assess end-to-end closure were not in the packet. Existing open V2/V3/D1 and extension entries were left untouched rather than duplicated from unverified excerpts. No runtime finding was filed: `.python-version:1` is `3.14`, `pyproject.toml:16` declares `>=3.11`, and `pyproject.toml:72` configures mypy for `3.12`; no compatible lock/CI evidence supports prescribing 3.15.2, and no exact outdated dependency was established.
+
+Coverage was bounded to the numbered excerpts, not an exhaustive review of all 73 files. Re-review on a concrete test, manuscript, or figure failure, or on a relevant production-source change, using that failure or changed source as the next evidence trigger.
