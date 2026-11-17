@@ -8,6 +8,30 @@ therapy) and **extreme-environment operations** (the Icelandic ice palace, the
 cold-water escape, and the orbital solar mirror *Icarus*) — are implemented as
 real, deterministic algorithms rather than named stubs.
 
+## Mission model
+
+```mermaid
+flowchart TD
+    accTitle: Die Another Day implemented mission analyses
+    accDescr: Biometric and DNA reads, Arctic exposure conditions, ice-sheet loads and Icarus orbit elements feed Gaussian biometric drift enrolment and Hamming-distance DNA identity forensics; Newtonian cold-air exposure ceilings, immersion hypothermia decay and floating-ice bearing failure; Circular ECI orbital mirror propagation, solar pass geometry and ground irradiance. The mission adapter returns identity replacement scores, thermal and structural margins and pass profiles with provenance, then a debrief.
+    I["Biometric and DNA reads, Arctic exposure conditions, ice-sheet loads and Icarus orbit elements"]
+    G0["Gaussian biometric drift enrolment and Hamming-distance DNA identity forensics"]
+    I --> G0
+    G1["Newtonian cold-air exposure ceilings, immersion hypothermia decay and floating-ice bearing failure"]
+    I --> G1
+    G2["Circular ECI orbital mirror propagation, solar pass geometry and ground irradiance"]
+    I --> G2
+    O["mission.py: execute returns MissionOutcome<br/>Identity replacement scores, thermal/structural margins, pass profiles and provenance"]
+    G0 --> O
+    G1 --> O
+    G2 --> O
+    O --> F["debrief: mission summary"]
+```
+
+The branches group implemented capabilities; they do not imply a runtime order.
+
+**Source map:** [`identity_detection.py`](src/die_another_day/identity_detection.py), [`sequence_identity.py`](src/die_another_day/sequence_identity.py); [`ice_ops.py`](src/die_another_day/ice_ops.py), [`hypothermia.py`](src/die_another_day/hypothermia.py), [`ice_structure.py`](src/die_another_day/ice_structure.py); [`orbital_mirror.py`](src/die_another_day/orbital_mirror.py), [`mission_results.py`](src/die_another_day/mission_results.py); [`mission.py`](src/die_another_day/mission.py).
+
 ## Film concept → software payload
 
 | Film idea | Module | What it actually computes |
