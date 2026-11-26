@@ -1,5 +1,7 @@
 # docs/ — agent-facing documentation for `die_another_day` (ICARUS)
 
+[Package maintenance](package-maintenance.md) covers dependency and release records.
+
 The technical rulebook for working inside this package. It documents the
 package as it actually is.
 
