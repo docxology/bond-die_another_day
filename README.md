@@ -1,5 +1,7 @@
 # die_another_day — ICARUS
 
+See [package maintenance](docs/package-maintenance.md) for dependency and citation records.
+
 **Die Another Day (2002)** · mission codename **ICARUS** · PROJECT BOND film package
 
 Special-agent mission software. The film's two central technical ideas —

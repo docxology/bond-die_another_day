@@ -1,5 +1,7 @@
 # docs/ — agent guide
 
+[Package maintenance](package-maintenance.md) identifies the dependency and citation records.
+
 Index for `die_another_day/docs/`. Each document is a constraint on how this
 package may be changed, not a suggestion.
 
