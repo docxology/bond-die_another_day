@@ -1,5 +1,8 @@
 # die_another_day — Agent Guide (ICARUS)
 
+The [package maintenance guide](docs/package-maintenance.md) records the
+distribution identity, Python selection, dependency provenance, and citation metadata.
+
 **Die Another Day (2002)** · mission codename **ICARUS** · PROJECT BOND film package.
 
 Build, test, and verify instructions. Deeper rules live in
